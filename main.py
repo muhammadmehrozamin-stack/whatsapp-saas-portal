@@ -5,9 +5,9 @@ import pandas as pd
 # ---------------------------------------------------------
 # Page Setup & Theme Styling
 # ---------------------------------------------------------
-st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_icon="🟢")
+st.set_page_config(page_title='WhatsApp SaaS Portal', layout='centered', page_icon='🟢')
 
-st.markdown("""
+st.markdown('''
     <style>
     .stApp {
         background-color: #050805;
@@ -84,10 +84,10 @@ st.markdown("""
         color: #000000 !important;
     }
     </style>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Initialize Supabase Client with Updated Key
+# Initialize Supabase Client
 # ---------------------------------------------------------
 SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
 SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
@@ -98,16 +98,87 @@ def init_supabase():
 
 supabase = init_supabase()
 
-if "page" not in st.session_state:
-    st.session_state.page = "landing"
-if "logged_in" not in st.session_state:
+if 'page' not in st.session_state:
+    st.session_state.page = 'landing'
+if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
-if "user_email" not in st.session_state:
-    st.session_state.user_email = ""
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = ''
 
 # ---------------------------------------------------------
 # View 1: Landing Page
 # ---------------------------------------------------------
-if st.session_state.page == "landing" and not st.session_state.logged_in:
-    st.markdown("""
-        <div style="text-align: center; margin-bottom:
+if st.session_state.page == 'landing' and not st.session_state.logged_in:
+    st.markdown('''
+        <div style="text-align: center; margin-bottom: 15px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+        </div>
+        <div class="neon-card">
+            <div class="neon-title">Welcome to<br><span style="color:#ccff00;">WhatsApp</span> SaaS Portal</div>
+            <div class="neon-subtitle">
+                Manage your AI-powered WhatsApp automated store, update live inventory in real-time, and streamline customer ordering directly through Supabase.
+            </div>
+        </div>
+    ''', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2.2, 1])
+    with col2:
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button('🚀 Join Now'):
+                st.session_state.page = 'signup'
+                st.rerun()
+        with b2:
+            if st.button('🔑 Login'):
+                st.session_state.page = 'login'
+                st.rerun()
+
+# ---------------------------------------------------------
+# View 2: Sign Up Modal Card
+# ---------------------------------------------------------
+elif st.session_state.page == 'signup' and not st.session_state.logged_in:
+    st.markdown('''
+        <div style="text-align: center; margin-bottom: 15px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+        </div>
+        <div class="neon-card">
+            <div class="neon-title">Welcome to Portal</div>
+            <div class="neon-subtitle">Create an account to start.</div>
+        </div>
+    ''', unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns([1, 2.2, 1])
+    with c2:
+        with st.form('signup_form'):
+            email = st.text_input('Email', placeholder='Enter your email')
+            password = st.text_input('Password', type='password', placeholder='Choose password')
+            agree = st.checkbox('I agree to Privacy Policy')
+            submit_signup = st.form_submit_button('Create Account')
+
+            if submit_signup:
+                if not email or not password:
+                    st.error('Please fill in all fields.')
+                elif not agree:
+                    st.warning('You must agree to the Privacy Policy.')
+                else:
+                    try:
+                        supabase.table('users').insert({'email': email, 'password': password}).execute()
+                        st.success('🎉 Account created successfully! Please Login Now.')
+                        st.session_state.page = 'login'
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f'Error creating account: {e}')
+
+        st.markdown("<p style='text-align:center; font-size:14px; margin-top:15px;'>Already have an account?</p>", unsafe_allow_html=True)
+        if st.button('Login now'):
+            st.session_state.page = 'login'
+            st.rerun()
+
+# ---------------------------------------------------------
+# View 3: Login Modal Card
+# ---------------------------------------------------------
+elif st.session_state.page == 'login' and not
