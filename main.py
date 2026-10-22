@@ -256,10 +256,15 @@ elif st.session_state.logged_in:
         st.markdown("<h1 style='color: #ccff00;'>Live Inventory Manager</h1>", unsafe_allow_html=True)
         st.write("Manage items synced with your WhatsApp store catalog.")
         
+        @st.cache_data(ttl=30)
+        def get_inventory():
+            res = supabase.table('products').select('*').execute()
+            return res.data
+
         try:
-            response = supabase.table('products').select('*').execute()
-            if response.data:
-                inventory_data = pd.DataFrame(response.data)
+            data = get_inventory()
+            if data:
+                inventory_data = pd.DataFrame(data)
                 st.dataframe(inventory_data, use_container_width=True)
             else:
                 st.info("No products found in your inventory yet. Use 'Add Product' to add some!")
@@ -295,6 +300,10 @@ elif st.session_state.logged_in:
                             "stock": prod_stock,
                             "user_email": st.session_state.user_email
                         }).execute()
+                        
+                        # Clear cache so inventory updates instantly
+                        st.cache_data.clear()
+                        
                         st.success(f"🎉 Product '{prod_name}' successfully added with price {curr_code} {prod_price}!")
                     except Exception as e:
                         st.error(f"Error adding product: {e}")
