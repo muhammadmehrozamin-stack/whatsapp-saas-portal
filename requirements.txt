@@ -1,3 +1,4 @@
-gradio
-supabase
+streamlit
 pandas
+supabase
+requests

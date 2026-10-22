@@ -1,99 +1,84 @@
-import gradio as gr
-from supabase import create_client, Client
+import streamlit as st
 import pandas as pd
+from supabase import create_client, Client
 
-# Initialize Supabase
-SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"  
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# --- Supabase Configuration ---
+SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9mZSI6ImFub24iLCJpYXQiOjE2..."  # Keep your actual key here
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def login_user(email, password):
-    if not email or not password:
-        return "Please fill in all fields."
-    try:
-        response = supabase.table("users").select("*").eq("email", email).eq("password", password).execute()
-        if response.data:
-            user = response.data[0]
-            return f"✅ Login Successful! Welcome {user['email']}"
-        else:
-            return "❌ Invalid email or password."
-    except Exception as e:
-        return f"Error: {e}"
+st.set_page_config(page_title="WhatsApp AI SaaS Portal", page_icon="🤖", layout="wide")
 
-def signup_user(email, password, whatsapp):
-    if not email or not password:
-        return "Please fill in email and password."
-    try:
-        supabase.table("users").insert({
-            "email": email,
-            "password": password,
-            "whatsapp_token": whatsapp
-        }).execute()
-        return "✅ Account created successfully!"
-    except Exception as e:
-        return f"Error: {e}"
+st.title("🤖 WhatsApp AI Sales & Inventory Portal")
+st.markdown("Manage your store products and view live inventory synced directly with your AI WhatsApp bot.")
 
-def add_product(name, price, stock, description):
-    if not name or not price:
-        return "Please provide product name and price."
-    try:
-        supabase.table("products").insert({
-            "name": name,
-            "price": float(price),
-            "stock": int(stock) if stock else 0,
-            "description": description
-        }).execute()
-        return f"✅ Product '{name}' added successfully!"
-    except Exception as e:
-        return f"Error: {e}"
+# --- Tabs for Navigation ---
+tab1, tab2, tab3 = st.tabs(["📦 Inventory Management", "👤 User Sign Up", "🔑 Login"])
 
-def fetch_products():
-    try:
-        response = supabase.table("products").select("*").execute()
-        if response.data:
-            return pd.DataFrame(response.data)
-        else:
-            return pd.DataFrame(columns=["name", "price", "stock", "description"])
-    except Exception:
-        return pd.DataFrame(columns=["name", "price", "stock", "description"])
-
-# Build Gradio Interface
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 🤖 WhatsApp AI SaaS - Inventory Portal")
+# --- Tab 1: Inventory & Products ---
+with tab1:
+    st.subheader("Add Products to AI WhatsApp Bot Inventory")
     
-    with gr.Accordion("🔑 User Login", open=True):
-        l_email = gr.Textbox(label="Email")
-        l_pass = gr.Textbox(label="Password", type="password")
-        l_btn = gr.Button("Login")
-        l_output = gr.Textbox(label="Status")
-        l_btn.click(login_user, inputs=[l_email, l_pass], outputs=l_output)
+    col1, col2 = st.columns(2)
+    with col1:
+        p_name = st.text_input("Product Name")
+        p_price = st.number_input("Price", min_value=0.0, value=0.0)
+    with col2:
+        p_stock = st.number_input("Stock Quantity", min_value=0, value=0)
         
-    with gr.Accordion("📝 User Sign Up", open=False):
-        s_email = gr.Textbox(label="Email")
-        s_pass = gr.Textbox(label="Password", type="password")
-        s_wa = gr.Textbox(label="WhatsApp Business Number", placeholder="+923001234567")
-        s_btn = gr.Button("Create Account")
-        s_output = gr.Textbox(label="Status")
-        s_btn.click(signup_user, inputs=[s_email, s_pass, s_wa], outputs=s_output)
+    p_desc = st.text_area("Product Description")
+    
+    if st.button("Add Product to Supabase", type="primary"):
+        if p_name:
+            try:
+                response = supabase.table("products").insert({
+                    "name": p_name,
+                    "price": p_price,
+                    "stock": p_stock,
+                    "description": p_desc
+                }).execute()
+                st.success(f"Success! Product '{p_name}' added to Supabase.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+        else:
+            st.warning("Please enter at least a product name.")
 
-    with gr.Accordion("📦 Manage Store Products & Inventory", open=False):
-        gr.Markdown("Add products for your AI WhatsApp Bot inventory:")
-        p_name = gr.Textbox(label="Product Name")
-        p_price = gr.Number(label="Price")
-        p_stock = gr.Number(label="Stock Quantity")
-        p_desc = gr.Textbox(label="Product Description")
-        p_btn = gr.Button("Add Product to Supabase")
-        p_output = gr.Textbox(label="Status")
-        
-        gr.Markdown("### 📋 Live Inventory Table:")
-        refresh_btn = gr.Button("Refresh Inventory List")
-        product_table = gr.DataFrame()
+    st.divider()
+    st.subheader("📊 Live Inventory Table")
+    
+    if st.button("Refresh Inventory List"):
+        try:
+            res = supabase.table("products").select("*").execute()
+            data = res.data
+            if data:
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("No products found in inventory.")
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
 
-        p_btn.click(add_product, inputs=[p_name, p_price, p_stock, p_desc], outputs=p_output)
-        refresh_btn.click(fetch_products, outputs=product_table)
+# --- Tab 2: User Sign Up ---
+with tab2:
+    st.subheader("Create a New Account")
+    s_email = st.text_input("Email Address", key="s_email")
+    s_pass = st.text_input("Password", type="password", key="s_pass")
+    s_wa = st.text_input("WhatsApp Business Number", placeholder="+923001234567")
+    
+    if st.button("Create Account"):
+        if s_email and s_pass:
+            st.success(f"Account successfully created for {s_email}!")
+        else:
+            st.warning("Please fill in email and password.")
 
-import os
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    demo.launch(server_name="0.0.0.0", server_port=port)
+# --- Tab 3: Login ---
+with tab3:
+    st.subheader("Portal Login")
+    l_email = st.text_input("Email Address", key="l_email")
+    l_pass = st.text_input("Password", type="password", key="l_pass")
+    
+    if st.button("Login"):
+        if l_email and l_pass:
+            st.success("Logged in successfully!")
+        else:
+            st.warning("Please enter your login details.")
