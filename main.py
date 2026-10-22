@@ -125,13 +125,150 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
 # View 2: Sign Up Dialog Box
 # ---------------------------------------------------------
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
-    st.markdown(f"""
+    st.markdown(whatsapp_icon_html, unsafe_allow_html=True)
+    st.markdown("""
         <div class="neon-card">
-            {whatsapp_icon_html}
             <div class="neon-title">Welcome to Portal</div>
             <div class="neon-subtitle">Create an account to start</div>
         </div>
     """, unsafe_allow_html=True)
 
     with st.form("signup_form"):
-        email =
+        email = st.text_input("Email", placeholder="Enter your email")
+        password = st.text_input("Password", type="password", placeholder="Choose password")
+        agree = st.checkbox("I agree to Privacy Policy")
+        submit_signup = st.form_submit_button("Create Account")
+
+        if submit_signup:
+            if not email or not password:
+                st.error("Please fill in all fields.")
+            elif not agree:
+                st.warning("You must agree to the Privacy Policy.")
+            else:
+                try:
+                    res = supabase.table("users").insert({"email": email, "password": password}).execute()
+                    st.success("🎉 Account created successfully! Please Login Now.")
+                    st.session_state.page = "login"
+                except Exception as e:
+                    st.error(f"Error creating account: {e}")
+
+    if st.button("Already have an account? Login"):
+        st.session_state.page = "login"
+        st.rerun()
+
+# ---------------------------------------------------------
+# View 3: Login Dialog Box
+# ---------------------------------------------------------
+elif st.session_state.page == "login" and not st.session_state.logged_in:
+    st.markdown(whatsapp_icon_html, unsafe_allow_html=True)
+    st.markdown("""
+        <div class="neon-card">
+            <div class="neon-title">Welcome to Website</div>
+            <div class="neon-subtitle">Sign in to Website</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    with st.form("login_form"):
+        email = st.text_input("Email", placeholder="Enter your email")
+        password = st.text_input("Password", type="password", placeholder="Enter your password")
+        st.markdown("<p style='font-size:12px;'>I agree to <span style='color:#ccff00;'>Privacy Policy</span></p>", unsafe_allow_html=True)
+        submit_login = st.form_submit_button("Login")
+
+        if submit_login:
+            if not email or not password:
+                st.error("Please fill in all fields.")
+            else:
+                try:
+                    res = supabase.table("users").select("*").eq("email", email).eq("password", password).execute()
+                    if res.data and len(res.data) > 0:
+                        st.session_state.logged_in = True
+                        st.session_state.user_email = email
+                        st.session_state.page = "dashboard"
+                        st.rerun()
+                    else:
+                        st.error("Invalid Email or Password.")
+                except Exception as e:
+                    st.error(f"Login error: {e}")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("⬅ Back to Home"):
+            st.session_state.page = "landing"
+            st.rerun()
+    with col2:
+        if st.button("Create Account"):
+            st.session_state.page = "signup"
+            st.rerun()
+
+# ---------------------------------------------------------
+# View 4: Dashboard (2 Tabs: Add Product & Live Products)
+# ---------------------------------------------------------
+elif st.session_state.logged_in:
+    st.sidebar.title(f"👤 {st.session_state.user_email}")
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.page = "landing"
+        st.rerun()
+
+    st.title("🛒 Product Management Portal")
+
+    tab1, tab2 = st.tabs(["➕ Add Product", "📦 Live Products & Inventory"])
+
+    # Tab 1: Add Product Form
+    with tab1:
+        st.subheader("Add a New Product")
+        with st.form("add_product_form", clear_on_submit=True):
+            p_name = st.text_input("Product Name")
+            p_price = st.number_input("Price ($)", min_value=0.0, step=1.0)
+            p_stock = st.number_input("Stock Quantity", min_value=0, step=1)
+            p_desc = st.text_area("Product Description")
+            
+            submit_prod = st.form_submit_button("Add Product to Store")
+
+            if submit_prod:
+                if not p_name:
+                    st.error("Product name is required.")
+                else:
+                    try:
+                        supabase.table("products").insert({
+                            "name": p_name,
+                            "price": p_price,
+                            "stock": p_stock,
+                            "description": p_desc
+                        }).execute()
+                        st.success(f"Successfully added '{p_name}' to inventory!")
+                    except Exception as e:
+                        st.error(f"Failed to add product: {e}")
+
+    # Tab 2: Live Products & Inline Editing
+    with tab2:
+        st.subheader("Current Live Products")
+        try:
+            response = supabase.table("products").select("*").execute()
+            data = response.data
+
+            if data:
+                df = pd.DataFrame(data)
+                
+                # Interactive Data Editor for Live Editing
+                st.write("✏️ **Edit live values below and click 'Save Changes'**")
+                edited_df = st.data_editor(df, num_rows="dynamic", key="product_editor")
+
+                if st.button("💾 Save Changes to Supabase"):
+                    try:
+                        for idx, row in edited_df.iterrows():
+                            if "id" in row and pd.notnull(row["id"]):
+                                supabase.table("products").update({
+                                    "name": row.get("name"),
+                                    "price": row.get("price"),
+                                    "stock": row.get("stock"),
+                                    "description": row.get("description")
+                                }).eq("id", row["id"]).execute()
+                        st.success("All product changes saved successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error saving updates: {e}")
+            else:
+                st.info("No products found in live store. Add one in the 'Add Product' tab!")
+        except Exception as e:
+            st.error(f"Error loading products: {e}")
