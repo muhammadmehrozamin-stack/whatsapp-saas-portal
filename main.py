@@ -86,15 +86,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# WhatsApp SVG Icon HTML helper
-whatsapp_icon = """
-<div style="text-align: center; margin-bottom: 15px;">
-    <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-    </svg>
-</div>
-"""
-
 # ---------------------------------------------------------
 # Initialize Supabase Client
 # ---------------------------------------------------------
@@ -118,7 +109,12 @@ if "user_email" not in st.session_state:
 # View 1: Landing Page
 # ---------------------------------------------------------
 if st.session_state.page == "landing" and not st.session_state.logged_in:
-    st.markdown(whatsapp_icon + """
+    st.markdown("""
+        <div style="text-align: center; margin-bottom: 15px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+        </div>
         <div class="neon-card">
             <div class="neon-title">Welcome to<br><span style="color:#ccff00;">WhatsApp</span> SaaS Portal</div>
             <div class="neon-subtitle">
@@ -143,7 +139,12 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
 # View 2: Sign Up Modal Card
 # ---------------------------------------------------------
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
-    st.markdown(whatsapp_icon + """
+    st.markdown("""
+        <div style="text-align: center; margin-bottom: 15px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+        </div>
         <div class="neon-card">
             <div class="neon-title">Welcome to Portal</div>
             <div class="neon-subtitle">Create an account to start.</div>
@@ -181,7 +182,12 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
 # View 3: Login Modal Card
 # ---------------------------------------------------------
 elif st.session_state.page == "login" and not st.session_state.logged_in:
-    st.markdown(whatsapp_icon + """
+    st.markdown("""
+        <div style="text-align: center; margin-bottom: 15px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+        </div>
         <div class="neon-card">
             <div class="neon-title">Welcome to Website</div>
             <div class="neon-subtitle">Sign in to Website</div>
@@ -228,7 +234,7 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
 # View 4: Dashboard (2 Tabs: Add Product & Live Products)
 # ---------------------------------------------------------
 elif st.session_state.logged_in:
-    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}", unsafe_allow_html=True)
+    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "landing"
