@@ -3,82 +3,86 @@ from supabase import create_client
 import pandas as pd
 
 # ---------------------------------------------------------
-# Page Setup & Theme Styling (Custom Neon Card Layout)
+# Page Setup & Theme Styling (Exact Neon Match)
 # ---------------------------------------------------------
 st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_icon="🟢")
 
 st.markdown("""
     <style>
-    /* Global dark app background */
     .stApp {
-        background-color: #080c08;
+        background-color: #050805;
         color: #ffffff;
     }
     
-    /* Main Neon Glow Card Container */
+    /* Neon Glow Card Container */
     .neon-card {
         border: 2px solid #ccff00;
-        border-radius: 24px;
-        padding: 40px;
-        background-color: #0e120e;
-        box-shadow: 0 0 25px rgba(204, 255, 0, 0.25);
-        max-width: 650px;
+        border-radius: 28px;
+        padding: 45px 35px;
+        background-color: #0b0f0b;
+        box-shadow: 0 0 30px rgba(204, 255, 0, 0.25);
+        max-width: 600px;
         margin: 30px auto;
+        text-align: center;
     }
     
     .neon-title {
         color: #ffffff;
-        font-size: 32px;
+        font-size: 34px;
         font-weight: 800;
         text-align: center;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        line-height: 1.2;
     }
     
     .neon-subtitle {
-        color: #ccff00;
+        color: #9e9e9e;
         font-size: 15px;
         text-align: center;
         margin-bottom: 30px;
+        line-height: 1.5;
     }
 
     /* Input Fields Styling */
     .stTextInput > div > div > input, .stPasswordInput > div > div > input {
-        background-color: #161b16 !important;
+        background-color: #141a14 !important;
         color: #ffffff !important;
         border-radius: 30px !important;
-        border: 1px solid #2a332a !important;
-        padding: 12px 20px !important;
+        border: 1px solid #283328 !important;
+        padding: 14px 20px !important;
     }
 
     /* Primary Neon Buttons */
     .stButton > button {
         background-color: #ccff00 !important;
-        color: #0b0f0b !important;
+        color: #050805 !important;
         font-weight: 800 !important;
         border-radius: 30px !important;
         border: none !important;
         width: 100% !important;
-        padding: 12px 0px !important;
+        padding: 14px 24px !important;
         font-size: 16px !important;
-        box-shadow: 0 0 15px rgba(204, 255, 0, 0.4);
+        box-shadow: 0 0 20px rgba(204, 255, 0, 0.4);
+        cursor: pointer;
     }
     .stButton > button:hover {
         background-color: #b3e600 !important;
-        box-shadow: 0 0 20px rgba(204, 255, 0, 0.7);
+        box-shadow: 0 0 25px rgba(204, 255, 0, 0.7);
     }
     
-    /* Tabs styling inside dashboard */
+    /* Dashboard Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 15px;
-        background-color: #121812;
+        background-color: #0e140e;
         padding: 10px;
-        border-radius: 15px;
+        border-radius: 18px;
+        border: 1px solid #222e22;
     }
     .stTabs [data-baseweb="tab"] {
-        background-color: #1a221a;
-        border-radius: 10px;
+        background-color: #162016;
+        border-radius: 12px;
         color: white;
-        padding: 10px 20px;
+        padding: 12px 24px;
         font-weight: bold;
     }
     .stTabs [aria-selected="true"] {
@@ -91,7 +95,7 @@ st.markdown("""
 # WhatsApp SVG Icon HTML helper
 whatsapp_icon_html = """
 <div style="text-align: center; margin-bottom: 15px;">
-    <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
     </svg>
 </div>
@@ -124,193 +128,4 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
     st.markdown("""
         <div class="neon-card">
             <div style="text-align: center; margin-bottom: 15px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                </svg>
-            </div>
-            <div class="neon-title">Welcome to<br><span style="color:#ccff00;">WhatsApp</span> SaaS Portal</div>
-            <div class="neon-subtitle" style="margin-top: 15px; color: #a0a0a0; font-size: 16px;">
-                Manage your AI-powered WhatsApp automated store, update live inventory in real-time, and streamline customer ordering directly through Supabase.
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        b1, b2 = st.columns(2)
-        with b1:
-            if st.button("🚀 Join Now"):
-                st.session_state.page = "signup"
-                st.rerun()
-        with b2:
-            if st.button("🔑 Login"):
-                st.session_state.page = "login"
-                st.rerun()
-
-# ---------------------------------------------------------
-# View 2: Sign Up Modal Card
-# ---------------------------------------------------------
-elif st.session_state.page == "signup" and not st.session_state.logged_in:
-    st.markdown("""
-        <div class="neon-card">
-            <div style="text-align: center; margin-bottom: 15px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                </svg>
-            </div>
-            <div class="neon-title">Welcome to Portal</div>
-            <div class="neon-subtitle">Create an account to start.</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns([1, 2.5, 1])
-    with c2:
-        with st.form("signup_form"):
-            email = st.text_input("Email", placeholder="Enter your email")
-            password = st.text_input("Password", type="password", placeholder="Choose password")
-            agree = st.checkbox("I agree to Privacy Policy")
-            submit_signup = st.form_submit_button("Create Account")
-
-            if submit_signup:
-                if not email or not password:
-                    st.error("Please fill in all fields.")
-                elif not agree:
-                    st.warning("You must agree to the Privacy Policy.")
-                else:
-                    try:
-                        supabase.table("users").insert({"email": email, "password": password}).execute()
-                        st.success("🎉 Account created successfully! Please Login Now.")
-                        st.session_state.page = "login"
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error creating account: {e}")
-
-        if st.button("Already have an account? Login now"):
-            st.session_state.page = "login"
-            st.rerun()
-
-# ---------------------------------------------------------
-# View 3: Login Modal Card
-# ---------------------------------------------------------
-elif st.session_state.page == "login" and not st.session_state.logged_in:
-    st.markdown("""
-        <div class="neon-card">
-            <div style="text-align: center; margin-bottom: 15px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                </svg>
-            </div>
-            <div class="neon-title">Welcome to Website</div>
-            <div class="neon-subtitle">Sign in to Website</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns([1, 2.5, 1])
-    with c2:
-        with st.form("login_form"):
-            email = st.text_input("Email", placeholder="Enter your email")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
-            st.markdown("<p style='font-size:13px; color:#a0a0a0;'>I agree to <span style='color:#ccff00;'>Privacy Policy</span></p>", unsafe_allow_html=True)
-            submit_login = st.form_submit_button("Login")
-
-            if submit_login:
-                if not email or not password:
-                    st.error("Please fill in all fields.")
-                else:
-                    try:
-                        res = supabase.table("users").select("*").eq("email", email).eq("password", password).execute()
-                        if res.data and len(res.data) > 0:
-                            st.session_state.logged_in = True
-                            st.session_state.user_email = email
-                            st.session_state.page = "dashboard"
-                            st.rerun()
-                        else:
-                            st.error("Invalid Email or Password.")
-                    except Exception as e:
-                        st.error(f"Login error: {e}")
-
-        b1, b2 = st.columns(2)
-        with b1:
-            if st.button("⬅ Back"):
-                st.session_state.page = "landing"
-                st.rerun()
-        with b2:
-            if st.button("Create Account"):
-                st.session_state.page = "signup"
-                st.rerun()
-
-# ---------------------------------------------------------
-# View 4: Dashboard (2 Tabs: Add Product & Live Products)
-# ---------------------------------------------------------
-elif st.session_state.logged_in:
-    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
-    if st.sidebar.button("Logout"):
-        st.session_state.logged_in = False
-        st.session_state.page = "landing"
-        st.rerun()
-
-    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Product Management Portal</h2>", unsafe_allow_html=True)
-    st.write("")
-
-    tab1, tab2 = st.tabs(["➕ Add Product", "📦 Live Products & Inventory"])
-
-    # Tab 1: Add Product Form
-    with tab1:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Add a New Product")
-        with st.form("add_product_form", clear_on_submit=True):
-            p_name = st.text_input("Product Name")
-            p_price = st.number_input("Price ($)", min_value=0.0, step=1.0)
-            p_stock = st.number_input("Stock Quantity", min_value=0, step=1)
-            p_desc = st.text_area("Product Description")
-            
-            submit_prod = st.form_submit_button("Add Product to Store")
-
-            if submit_prod:
-                if not p_name:
-                    st.error("Product name is required.")
-                else:
-                    try:
-                        supabase.table("products").insert({
-                            "name": p_name,
-                            "price": p_price,
-                            "stock": p_stock,
-                            "description": p_desc
-                        }).execute()
-                        st.success(f"Successfully added '{p_name}' to inventory!")
-                    except Exception as e:
-                        st.error(f"Failed to add product: {e}")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Tab 2: Live Products & Inline Editing
-    with tab2:
-        st.markdown("<div class='neon-card' style='max-width: 900px;'>", unsafe_allow_html=True)
-        st.subheader("Current Live Products")
-        try:
-            response = supabase.table("products").select("*").execute()
-            data = response.data
-
-            if data:
-                df = pd.DataFrame(data)
-                st.write("✏️ **Edit live values below and click 'Save Changes'**")
-                edited_df = st.data_editor(df, num_rows="dynamic", key="product_editor", use_container_width=True)
-
-                if st.button("💾 Save Changes to Supabase"):
-                    try:
-                        for idx, row in edited_df.iterrows():
-                            if "id" in row and pd.notnull(row["id"]):
-                                supabase.table("products").update({
-                                    "name": row.get("name"),
-                                    "price": row.get("price"),
-                                    "stock": row.get("stock"),
-                                    "description": row.get("description")
-                                }).eq("id", row["id"]).execute()
-                        st.success("All product changes saved successfully!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error saving updates: {e}")
-            else:
-                st.info("No products found in live store. Add one in the 'Add Product' tab!")
-        except Exception as e:
-            st.error(f"Error loading products: {e}")
-        st.markdown("</div>", unsafe_allow_html=True)
+                <svg xmlns="
