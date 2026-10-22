@@ -90,7 +90,7 @@ st.markdown('''
 # Initialize Supabase Client
 # ---------------------------------------------------------
 SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
-SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
 
 @st.cache_resource
 def init_supabase():
@@ -136,7 +136,7 @@ if st.session_state.page == 'landing' and not st.session_state.logged_in:
                 st.rerun()
 
 # ---------------------------------------------------------
-# View 2: Sign Up Modal Card
+# View 2: Sign Up Modal Card (Includes WhatsApp Number)
 # ---------------------------------------------------------
 elif st.session_state.page == 'signup' and not st.session_state.logged_in:
     st.markdown('''
@@ -155,18 +155,23 @@ elif st.session_state.page == 'signup' and not st.session_state.logged_in:
     with c2:
         with st.form('signup_form'):
             email = st.text_input('Email', placeholder='Enter your email')
+            whatsapp = st.text_input('WhatsApp Number', placeholder='Enter WhatsApp (e.g., +923001234567)')
             password = st.text_input('Password', type='password', placeholder='Choose password')
             agree = st.checkbox('I agree to Privacy Policy')
             submit_signup = st.form_submit_button('Create Account')
 
             if submit_signup:
-                if not email or not password:
-                    st.error('Please fill in all fields.')
+                if not email or not whatsapp or not password:
+                    st.error('Please fill in all fields including your WhatsApp number.')
                 elif not agree:
                     st.warning('You must agree to the Privacy Policy.')
                 else:
                     try:
-                        supabase.table('users').insert({'email': email, 'password': password}).execute()
+                        supabase.table('users').insert({
+                            'email': email, 
+                            'whatsapp': whatsapp, 
+                            'password': password
+                        }).execute()
                         st.success('🎉 Account created successfully! Please Login Now.')
                         st.session_state.page = 'login'
                         st.rerun()
