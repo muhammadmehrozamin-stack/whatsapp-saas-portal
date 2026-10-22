@@ -197,4 +197,74 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
     c1, c2, c3 = st.columns([1, 2.2, 1])
     with c2:
         with st.form('login_form'):
-            email = st.
+            email = st.text_input('Email', placeholder='Enter your email')
+            password = st.text_input('Password', type='password', placeholder='Enter your password')
+            submit_login = st.form_submit_button('Login')
+
+            if submit_login:
+                if not email or not password:
+                    st.error('Please fill in all fields.')
+                else:
+                    try:
+                        response = supabase.table('users').select('*').eq('email', email).eq('password', password).execute()
+                        if response.data:
+                            st.session_state.logged_in = True
+                            st.session_state.user_email = email
+                            st.session_state.page = 'dashboard'
+                            st.success('🎉 Login successful!')
+                            st.rerun()
+                        else:
+                            st.error('Invalid email or password.')
+                    except Exception as e:
+                        st.error(f'Login error: {e}')
+
+        st.markdown("<p style='text-align:center; font-size:14px; margin-top:15px;'>Don't have an account?</p>", unsafe_allow_html=True)
+        if st.button('Sign up now'):
+            st.session_state.page = 'signup'
+            st.rerun()
+
+# ---------------------------------------------------------
+# View 4: Dashboard (Logged In Area)
+# ---------------------------------------------------------
+elif st.session_state.logged_in:
+    st.sidebar.title("🟢 WhatsApp SaaS Portal")
+    st.sidebar.write(f"Logged in as: **{st.session_state.user_email}**")
+    
+    nav = st.sidebar.radio("Navigation", ["Dashboard Overview", "Inventory Manager", "WhatsApp Campaigns"])
+    
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.user_email = ''
+        st.session_state.page = 'landing'
+        st.rerun()
+
+    if nav == "Dashboard Overview":
+        st.markdown("<h1 style='color: #ccff00;'>Dashboard Overview</h1>", unsafe_allow_html=True)
+        st.write(f"Welcome back, {st.session_state.user_email}! Manage your automated WhatsApp store and inventory effortlessly.")
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Active WhatsApp Bot", "Online", "Connected")
+        col2.metric("Total Orders Today", "24", "+15%")
+        col3.metric("Inventory Items", "142", "Synced")
+        
+    elif nav == "Inventory Manager":
+        st.markdown("<h1 style='color: #ccff00;'>Live Inventory Manager</h1>", unsafe_allow_html=True)
+        st.write("Manage items synced with your WhatsApp store catalog.")
+        
+        inventory_data = pd.DataFrame({
+            "Item Name": ["Product A", "Product B", "Product C"],
+            "Price ($)": [29.99, 49.99, 15.00],
+            "Stock": [50, 12, 120]
+        })
+        st.dataframe(inventory_data, use_container_width=True)
+        
+    elif nav == "WhatsApp Campaigns":
+        st.markdown("<h1 style='color: #ccff00;'>WhatsApp Automated Campaigns</h1>", unsafe_allow_html=True)
+        st.write("Broadcast promotional messages or automated responses to customer segments.")
+        camp_name = st.text_input("Campaign Title")
+        camp_msg = st.text_area("Message Body")
+        if st.button("Launch Broadcast"):
+            if camp_name and camp_msg:
+                st.success(f"Campaign '{camp_name}' has been queued for broadcast!")
+            else:
+                st.warning("Please fill in both fields.")
