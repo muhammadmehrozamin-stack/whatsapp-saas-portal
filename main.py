@@ -3,7 +3,7 @@ from supabase import create_client
 import pandas as pd
 
 # ---------------------------------------------------------
-# Page Setup & Theme Styling (Exact Neon Match)
+# Page Setup & Theme Styling
 # ---------------------------------------------------------
 st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_icon="🟢")
 
@@ -14,7 +14,6 @@ st.markdown("""
         color: #ffffff;
     }
     
-    /* Neon Glow Card Container */
     .neon-card {
         border: 2px solid #ccff00;
         border-radius: 28px;
@@ -32,7 +31,6 @@ st.markdown("""
         font-weight: 800;
         text-align: center;
         margin-bottom: 10px;
-        line-height: 1.2;
     }
     
     .neon-subtitle {
@@ -43,7 +41,6 @@ st.markdown("""
         line-height: 1.5;
     }
 
-    /* Input Fields Styling */
     .stTextInput > div > div > input, .stPasswordInput > div > div > input {
         background-color: #141a14 !important;
         color: #ffffff !important;
@@ -52,7 +49,6 @@ st.markdown("""
         padding: 14px 20px !important;
     }
 
-    /* Primary Neon Buttons */
     .stButton > button {
         background-color: #ccff00 !important;
         color: #050805 !important;
@@ -63,14 +59,12 @@ st.markdown("""
         padding: 14px 24px !important;
         font-size: 16px !important;
         box-shadow: 0 0 20px rgba(204, 255, 0, 0.4);
-        cursor: pointer;
     }
     .stButton > button:hover {
         background-color: #b3e600 !important;
         box-shadow: 0 0 25px rgba(204, 255, 0, 0.7);
     }
     
-    /* Dashboard Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 15px;
         background-color: #0e140e;
@@ -93,7 +87,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # WhatsApp SVG Icon HTML helper
-whatsapp_icon_html = """
+whatsapp_icon = """
 <div style="text-align: center; margin-bottom: 15px;">
     <svg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
@@ -113,7 +107,6 @@ def init_supabase():
 
 supabase = init_supabase()
 
-# Session State Variables
 if "page" not in st.session_state:
     st.session_state.page = "landing"
 if "logged_in" not in st.session_state:
@@ -125,7 +118,41 @@ if "user_email" not in st.session_state:
 # View 1: Landing Page
 # ---------------------------------------------------------
 if st.session_state.page == "landing" and not st.session_state.logged_in:
-    st.markdown("""
+    st.markdown(whatsapp_icon + """
         <div class="neon-card">
-            <div style="text-align: center; margin-bottom: 15px;">
-                <svg xmlns="
+            <div class="neon-title">Welcome to<br><span style="color:#ccff00;">WhatsApp</span> SaaS Portal</div>
+            <div class="neon-subtitle">
+                Manage your AI-powered WhatsApp automated store, update live inventory in real-time, and streamline customer ordering directly through Supabase.
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2.2, 1])
+    with col2:
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("🚀 Join Now"):
+                st.session_state.page = "signup"
+                st.rerun()
+        with b2:
+            if st.button("🔑 Login"):
+                st.session_state.page = "login"
+                st.rerun()
+
+# ---------------------------------------------------------
+# View 2: Sign Up Modal Card
+# ---------------------------------------------------------
+elif st.session_state.page == "signup" and not st.session_state.logged_in:
+    st.markdown(whatsapp_icon + """
+        <div class="neon-card">
+            <div class="neon-title">Welcome to Portal</div>
+            <div class="neon-subtitle">Create an account to start.</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns([1, 2.2, 1])
+    with c2:
+        with st.form("signup_form"):
+            email = st.text_input("Email", placeholder="Enter your email")
+            password = st.text_input("Password", type="password", placeholder="Choose password")
+            agree = st.checkbox("I agree to Privacy Policy")
