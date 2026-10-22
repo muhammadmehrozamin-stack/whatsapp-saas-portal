@@ -90,7 +90,7 @@ st.markdown("""
 # Initialize Supabase Client
 # ---------------------------------------------------------
 SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MzAyOTEsImV4cCI6MjA1NjEwNjI5MX0.Qp-_7W5Gq6Q0Xp5xVvD4oJp6K3lY0q-4S5T9Xf7qSgE"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
 
 @st.cache_resource
 def init_supabase():
