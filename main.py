@@ -234,7 +234,7 @@ elif st.session_state.logged_in:
     st.sidebar.title("🟢 WhatsApp SaaS Portal")
     st.sidebar.write(f"Logged in as: **{st.session_state.user_email}**")
     
-    nav = st.sidebar.radio("Navigation", ["Dashboard Overview", "Inventory Manager", "WhatsApp Campaigns"])
+    nav = st.sidebar.radio("Navigation", ["Dashboard Overview", "Inventory Manager", "Add Product", "WhatsApp Campaigns"])
     
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
@@ -247,20 +247,49 @@ elif st.session_state.logged_in:
         st.write(f"Welcome back, {st.session_state.user_email}! Manage your automated WhatsApp store and inventory effortlessly.")
         
         col1, col2, col3 = st.columns(3)
-        col1.metric("Active WhatsApp Bot", "Online", "Connected")
-        col2.metric("Total Orders Today", "24", "+15%")
-        col3.metric("Inventory Items", "142", "Synced")
+        col1.metric("Active WhatsApp Bot", "Standby", "Ready")
+        col2.metric("Total Orders Today", "0", "No orders yet")
+        col3.metric("Inventory Items", "0", "Not synced")
         
     elif nav == "Inventory Manager":
         st.markdown("<h1 style='color: #ccff00;'>Live Inventory Manager</h1>", unsafe_allow_html=True)
         st.write("Manage items synced with your WhatsApp store catalog.")
         
-        inventory_data = pd.DataFrame({
-            "Item Name": ["Product A", "Product B", "Product C"],
-            "Price ($)": [29.99, 49.99, 15.00],
-            "Stock": [50, 12, 120]
-        })
-        st.dataframe(inventory_data, use_container_width=True)
+        try:
+            # Fetch products from Supabase 'products' table
+            response = supabase.table('products').select('*').execute()
+            if response.data:
+                inventory_data = pd.DataFrame(response.data)
+                st.dataframe(inventory_data, use_container_width=True)
+            else:
+                st.info("No products found in your inventory yet. Use 'Add Product' to add some!")
+        except Exception as e:
+            st.warning("Could not load inventory table from Supabase yet. Make sure your 'products' table is created.")
+            
+    elif nav == "Add Product":
+        st.markdown("<h1 style='color: #ccff00;'>Add New Product</h1>", unsafe_allow_html=True)
+        st.write("Add a new item to your WhatsApp store catalog.")
+        
+        with st.form("add_product_form"):
+            prod_name = st.text_input("Product Name", placeholder="e.g., Wireless Earbuds")
+            prod_price = st.number_input("Price ($)", min_value=0.0, format="%.2f")
+            prod_stock = st.number_input("Stock Quantity", min_value=0, step=1)
+            submit_product = st.form_submit_button("Save Product")
+            
+            if submit_product:
+                if not prod_name:
+                    st.error("Please enter a product name.")
+                else:
+                    try:
+                        supabase.table('products').insert({
+                            "name": prod_name,
+                            "price": prod_price,
+                            "stock": prod_stock,
+                            "user_email": st.session_state.user_email
+                        }).execute()
+                        st.success(f"🎉 Product '{prod_name}' successfully added to your inventory!")
+                    except Exception as e:
+                        st.error(f"Error adding product: {e}")
         
     elif nav == "WhatsApp Campaigns":
         st.markdown("<h1 style='color: #ccff00;'>WhatsApp Automated Campaigns</h1>", unsafe_allow_html=True)
