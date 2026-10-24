@@ -158,5 +158,158 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
 # View 4: Dashboard
 # ---------------------------------------------------------
 elif st.session_state.logged_in:
-    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
-    st.sidebar.
+    top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
+    with top_col1:
+        st.markdown(f"👤 **{st.session_state.user_email}**")
+    with top_col2:
+        st.markdown(f"📱 **WhatsApp:** `{st.session_state.whatsapp_number}`")
+    with top_col3:
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.session_state.page = "landing"
+            st.rerun()
+
+    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Smart Sales Portal</h2>", unsafe_allow_html=True)
+
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Overview", 
+        "➕ Add & Edit", 
+        "📦 Live Products", 
+        "🤖 Sales Bot", 
+        "📢 Campaigns",
+        "📱 Settings"
+    ])
+
+    # Tab 1: Overview
+    with tab1:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Dashboard Overview")
+        try:
+            res = supabase.table("products").select("*").execute()
+            prods = res.data if res.data else []
+            st.metric("Total Products", len(prods))
+            st.metric("Total Stock", sum([p.get('stock', 0) for p in prods]))
+            st.success("Connected to Supabase successfully!")
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 2: Add & Edit Product
+    with tab2:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Add New Product")
+        with st.form("add_prod_form", clear_on_submit=True):
+            p_name = st.text_input("Product Name")
+            p_price = st.number_input("Price ($)", min_value=0.0)
+            p_stock = st.number_input("Stock", min_value=0, step=1)
+            p_desc = st.text_area("Description, Colors & Features")
+            p_img = st.file_uploader("Product Image (Optional)", type=['jpg', 'png'])
+            
+            if st.form_submit_button("Add Product"):
+                if p_name:
+                    try:
+                        img_name = p_img.name if p_img else "No image"
+                        supabase.table("products").insert({
+                            "name": p_name,
+                            "price": p_price,
+                            "stock": p_stock,
+                            "description": f"{p_desc} [Image: {img_name}]"
+                        }).execute()
+                        st.success(f"Added {p_name} successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                else:
+                    st.warning("Product name required.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Edit Inventory")
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                df = pd.DataFrame(resp.data)
+                edited = st.data_editor(df, key="editor", use_container_width=True)
+                if st.button("Save Edits"):
+                    for _, row in edited.iterrows():
+                        if 'id' in row and pd.notnull(row['id']):
+                            supabase.table("products").update({
+                                "name": row.get("name"),
+                                "price": row.get("price"),
+                                "stock": row.get("stock"),
+                                "description": row.get("description")
+                            }).eq("id", row["id"]).execute()
+                    st.success("Changes saved!")
+                    st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 3: Live Products
+    with tab3:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                st.dataframe(pd.DataFrame(resp.data), use_container_width=True)
+            else:
+                st.info("No products found.")
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 4: Sales Bot
+    with tab4:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Smart Sales Bot")
+        
+        if "chat" not in st.session_state:
+            st.session_state.chat = [{"role": "assistant", "content": "Hello! Ask me about product colors, features, or prices."}]
+
+        for m in st.session_state.chat:
+            align = "right" if m["role"] == "user" else "left"
+            bg = "#1e2d1e" if m["role"] == "user" else "#141a14"
+            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=True)
+
+        user_q = st.text_input("Customer Message", key="q_input")
+        c_send, c_clear = st.columns(2)
+        with c_send:
+            if st.button("Send"):
+                if user_q:
+                    st.session_state.chat.append({"role": "user", "content": user_q})
+                    res = supabase.table("products").select("*").execute()
+                    items = res.data if res.data else []
+                    reply = generate_smart_sales_response(user_q, items)
+                    st.session_state.chat.append({"role": "assistant", "content": reply})
+                    st.rerun()
+        with c_clear:
+            if st.button("Clear Chat"):
+                st.session_state.chat = [{"role": "assistant", "content": "Hello! Ask me about product colors, features, or prices."}]
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 5: Campaigns
+    with tab5:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("WhatsApp Campaigns")
+        c_name = st.text_input("Campaign Title")
+        c_msg = st.text_area("Message Template")
+        if st.button("Launch Campaign"):
+            if c_name and c_msg:
+                st.success(f"Campaign '{c_name}' broadcasted successfully!")
+            else:
+                st.warning("Fill in all fields.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 6: Settings
+    with tab6:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Settings")
+        new_num = st.text_input("WhatsApp Number", value=st.session_state.whatsapp_number)
+        new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
+        if st.button("Save Settings"):
+            st.session_state.whatsapp_number = new_num
+            st.session_state.bot_custom_rule = new_rule
+            st.success("Settings saved successfully!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
