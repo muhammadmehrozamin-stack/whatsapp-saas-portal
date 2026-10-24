@@ -1,9 +1,9 @@
 import streamlit as st
 from supabase import create_client
 import pandas as pd
-import urllib.request
 import json
 import random
+import google.generativeai as genai
 
 st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_icon="🟢")
 
@@ -57,18 +57,15 @@ def call_gemini_api(prompt, inventory_context, rules, api_key):
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the Settings tab!"
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_to_use}"
-    system_instruction = rules + "\nINVENTORY:\n" + inventory_context
-    payload = {"contents": [{"parts": [{"text": system_instruction}, {"text": prompt}]}]}
-    
     try:
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'}, method='POST')
-        response = urllib.request.urlopen(req)
-        res_data = json.loads(response.read().decode('utf-8'))
-        response.close()
-        return res_data['candidates'][0]['content']['parts'][0]['text']
+        genai.configure(api_key=key_to_use)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        system_instruction = rules + "\nINVENTORY:\n" + inventory_context
+        full_prompt = f"{system_instruction}\n\nCustomer Message: {prompt}"
+        response = model.generate_content(full_prompt)
+        return response.text
     except Exception as e:
-        return f"Error connecting to Gemini API: {e}"
+        return f"Error connecting to Gemini SDK: {e}"
 
 if st.session_state.page == "landing" and not st.session_state.logged_in:
     st.markdown("""
