@@ -78,4 +78,28 @@ def call_groq_api(prompt, inventory_context, training_context, rules, api_key):
         res_data = response.json()
         
         if response.status_code == 200:
-            choices =
+            choices_list = res_data.get("choices", [])
+            if choices_list:
+                return choices_list[0]["message"]["content"]
+            return "No response generated."
+        else:
+            error_msg = res_data.get("error", {}).get("message", response.text)
+            return f"API Error ({response.status_code}): {error_msg}"
+            
+    except Exception as e:
+        return f"Error connecting to Groq API: {e}"
+
+if st.session_state.page == "landing" and not st.session_state.logged_in:
+    st.markdown("""
+        <div class='neon-card'>
+            <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS Portal</div>
+            <div class='neon-subtitle'>Manage your AI-powered WhatsApp store and live inventory through Supabase.</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2.2, 1])
+    with col2:
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("🚀 Join Now"):
+                st.session_state.page
