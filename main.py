@@ -57,8 +57,8 @@ def call_gemini_api(prompt, inventory_context, rules, api_key):
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the Settings tab!"
     
-    # Switched to gemini-pro which is universally available on all Google AI keys without 404 errors
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key_to_use}"
+    # Using the current standard gemini-3.8-flash model endpoint
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={key_to_use}"
     system_instruction = rules + "\nINVENTORY:\n" + inventory_context
     payload = {"contents": [{"parts": [{"text": system_instruction}, {"text": prompt}]}]}
     
@@ -299,60 +299,4 @@ elif st.session_state.logged_in:
                     st.rerun()
         with c_clear:
             if st.button("Clear Chat"):
-                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
-                st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with tab5:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("WhatsApp Campaigns")
-        c_name = st.text_input("Campaign Title")
-        c_msg = st.text_area("Message Template")
-        if st.button("Launch Campaign"):
-            if c_name and c_msg:
-                st.success(f"Campaign '{c_name}' broadcasted successfully!")
-            else:
-                st.warning("Fill in all fields.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with tab6:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Settings & Configuration")
-        
-        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste Gemini API key...")
-        new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
-        
-        st.markdown("---")
-        st.subheader("📱 Change WhatsApp Number (OTP Required)")
-        pending_num = st.text_input("New WhatsApp Number", value=st.session_state.whatsapp_number)
-        
-        if not st.session_state.settings_otp_step:
-            if st.button("Request OTP"):
-                if pending_num != st.session_state.whatsapp_number:
-                    otp_code = str(random.randint(100000, 999999))
-                    st.session_state.pending_whatsapp = pending_num
-                    st.session_state.settings_otp_code = otp_code
-                    st.session_state.settings_otp_step = True
-                    st.success(f"OTP Code: {otp_code}")
-                    st.rerun()
-                else:
-                    st.info("This is already your current number.")
-        else:
-            st.write("Enter verification code sent to your new WhatsApp")
-            entered_set_otp = st.text_input("Enter OTP", placeholder="123456")
-            if st.button("Verify & Update"):
-                if entered_set_otp == st.session_state.settings_otp_code:
-                    st.session_state.whatsapp_number = st.session_state.pending_whatsapp
-                    st.session_state.settings_otp_step = False
-                    st.success("WhatsApp number updated!")
-                    st.rerun()
-                else:
-                    st.error("Invalid OTP.")
-        
-        st.markdown("---")
-        if st.button("Save Settings"):
-            st.session_state.gemini_api_key = gemini_key_input
-            st.session_state.bot_custom_rule = new_rule
-            st.success("Settings saved!")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+                st.session_state.chat =
