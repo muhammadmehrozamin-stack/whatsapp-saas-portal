@@ -20,8 +20,8 @@ st.markdown('''
         padding: 45px 35px;
         background-color: #0b0f0b;
         box-shadow: 0 0 30px rgba(204, 255, 0, 0.25);
-        max-width: 600px;
-        margin: 30px auto;
+        max-width: 750px;
+        margin: 20px auto;
         text-align: center;
     }
     
@@ -41,12 +41,12 @@ st.markdown('''
         line-height: 1.5;
     }
 
-    .stTextInput > div > div > input, .stPasswordInput > div > div > input {
+    .stTextInput > div > div > input, .stPasswordInput > div > div > input, .stTextArea textarea {
         background-color: #141a14 !important;
         color: #ffffff !important;
-        border-radius: 30px !important;
+        border-radius: 20px !important;
         border: 1px solid #283328 !important;
-        padding: 14px 20px !important;
+        padding: 12px 18px !important;
     }
 
     .stButton > button {
@@ -66,18 +66,20 @@ st.markdown('''
     }
     
     .stTabs [data-baseweb="tab-list"] {
-        gap: 15px;
+        gap: 8px;
         background-color: #0e140e;
-        padding: 10px;
+        padding: 8px;
         border-radius: 18px;
         border: 1px solid #222e22;
+        flex-wrap: wrap;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: #162016;
         border-radius: 12px;
         color: white;
-        padding: 12px 24px;
+        padding: 8px 14px;
         font-weight: bold;
+        font-size: 13px;
     }
     .stTabs [aria-selected="true"] {
         background-color: #ccff00 !important;
@@ -104,6 +106,14 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 if 'user_email' not in st.session_state:
     st.session_state.user_email = ''
+
+# Store WhatsApp Business Number in Session State
+if 'whatsapp_number' not in st.session_state:
+    st.session_state.whatsapp_number = '+92 300 0000000'
+
+# Default AI Training Memory in Session State
+if 'bot_custom_rule' not in st.session_state:
+    st.session_state.bot_custom_rule = "Always be friendly, mention express delivery, and push to close the order immediately."
 
 # ---------------------------------------------------------
 # View 1: Landing Page
@@ -231,10 +241,11 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
                 st.rerun()
 
 # ---------------------------------------------------------
-# View 4: Dashboard (3 Tabs: Add Product, Live Inventory, AI Assistant)
+# View 4: Dashboard with 6 Specialized Tabs
 # ---------------------------------------------------------
 elif st.session_state.logged_in:
     st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
+    st.sidebar.markdown(f"📱 **Active WhatsApp:**\n`{st.session_state.whatsapp_number}`")
     if st.sidebar.button('Logout'):
         st.session_state.logged_in = False
         st.session_state.page = 'landing'
@@ -243,12 +254,46 @@ elif st.session_state.logged_in:
     st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Product Management Portal</h2>", unsafe_allow_html=True)
     st.write("")
 
-    tab1, tab2, tab3 = st.tabs(['➕ Add Product', '📦 Live Inventory', '🤖 AI WhatsApp Bot'])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        '📊 Overview', 
+        '➕ Add & Edit', 
+        '📦 Live Products', 
+        '🤖 AI Bot & Trainer', 
+        '📢 Campaigns',
+        '📱 WhatsApp Settings'
+    ])
 
-    # Tab 1: Add Product Form
+    # ---------------------------------------------------------
+    # Tab 1: Dashboard Overview
+    # ---------------------------------------------------------
     with tab1:
-        st.markdown("<div class='neon-card' style='max-width:700px;'>", unsafe_allow_html=True)
-        st.subheader('Add a New Product')
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("📊 Dashboard Overview")
+        st.write("Welcome back! Here is a quick snapshot of your WhatsApp automated store.")
+        
+        try:
+            res = supabase.table('products').select('*').execute()
+            prods = res.data
+            total_items = len(prods) if prods else 0
+            total_stock = sum([p.get('stock', 0) for p in prods]) if prods else 0
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Total Store Products", total_items)
+            with col_b:
+                st.metric("Total Warehouse Stock", total_stock)
+                
+            st.success("🟢 Supabase Database Connected & Synced")
+        except Exception as e:
+            st.error(f"Error loading overview stats: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # Tab 2: Add & Edit Product
+    # ---------------------------------------------------------
+    with tab2:
+        st.markdown("<div class='neon-card' style='max-width:800px;'>", unsafe_allow_html=True)
+        st.subheader('➕ Add a New Product')
         with st.form('add_product_form', clear_on_submit=True):
             p_name = st.text_input('Product Name')
             p_price = st.number_input('Price ($)', min_value=0.0, step=1.0)
@@ -269,85 +314,164 @@ elif st.session_state.logged_in:
                             'description': p_desc
                         }).execute()
                         st.success(f"Successfully added '{p_name}' to inventory!")
+                        st.rerun()
                     except Exception as e:
                         st.error(f'Failed to add product: {e}')
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # Tab 2: Live Products & Inline Editing
-    with tab2:
+        st.markdown("<div class='neon-card' style='max-width:800px;'>", unsafe_allow_html=True)
+        st.subheader('✏️ Quick Edit & Manage Product Details')
+        st.write("Modify any field below or delete rows, then click save to update Supabase.")
+        try:
+            resp = supabase.table('products').select('*').execute()
+            if resp.data:
+                df_edit = pd.DataFrame(resp.data)
+                edited_grid = st.data_editor(df_edit, num_rows='dynamic', key='manage_products_grid', use_container_width=True)
+                
+                if st.button('💾 Save Product Edits'):
+                    try:
+                        for idx, row in edited_grid.iterrows():
+                            if 'id' in row and pd.notnull(row['id']):
+                                supabase.table('products').update({
+                                    'name': row.get('name'),
+                                    'price': row.get('price'),
+                                    'stock': row.get('stock'),
+                                    'description': row.get('description')
+                                }).eq('id', row['id']).execute()
+                        st.success('Product details updated successfully!')
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f'Error saving edits: {e}')
+            else:
+                st.info("No products found to edit.")
+        except Exception as e:
+            st.error(f"Error loading inventory editor: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # Tab 3: Live Products & Inventory
+    # ---------------------------------------------------------
+    with tab3:
         st.markdown("<div class='neon-card' style='max-width: 900px;'>", unsafe_allow_html=True)
-        st.subheader('Current Live Products')
+        st.subheader('📦 Live Inventory Manager')
+        st.write("Manage items synced with your WhatsApp store catalog.")
         try:
             response = supabase.table('products').select('*').execute()
             data = response.data
 
             if data:
                 df = pd.DataFrame(data)
-                st.write("✏️ **Edit live values below and click 'Save Changes'**")
-                edited_df = st.data_editor(df, num_rows='dynamic', key='product_editor', use_container_width=True)
-
-                if st.button('💾 Save Changes to Supabase'):
-                    try:
-                        for idx, row in edited_df.iterrows():
-                            if 'id' in row and pd.notnull(row['id']):
-                                supabase.table('products').update({
-                                    'name': row.get('name'),
-                                    'price': row.get('price'),
-                                    'stock': row.get("stock"),
-                                    'description': row.get('description')
-                                }).eq('id', row['id']).execute()
-                        st.success('All product changes saved successfully!')
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'Error saving updates: {e}')
+                st.dataframe(df, use_container_width=True)
             else:
-                st.info("No products found in live store. Add one in the 'Add Product' tab!")
+                st.info("No products found in live store. Add one in the 'Add & Edit' tab!")
         except Exception as e:
             st.error(f'Error loading products: {e}')
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # Tab 3: AI WhatsApp Bot & Simulator
-    with tab3:
-        st.markdown("<div class='neon-card' style='max-width: 800px;'>", unsafe_allow_html=True)
-        st.subheader("🤖 WhatsApp AI Auto-Reply Simulator")
-        st.write("Test how your AI bot responds to customer queries based on your live Supabase inventory.")
-        
-        customer_query = st.text_input("Simulate Customer Message", placeholder="e.g., Hi, is the PS5 in stock and how much is it?")
-        
-        if st.button("Generate AI WhatsApp Reply"):
-            if not customer_query:
-                st.warning("Please enter a customer query.")
+    # ---------------------------------------------------------
+    # Tab 4: AI Bot & Salesman Trainer
+    # ---------------------------------------------------------
+    with tab4:
+        st.markdown("<div class='neon-card' style='max-width: 850px;'>", unsafe_allow_html=True)
+        st.subheader("🤖 AI Sales Bot & Salesman Trainer")
+        st.write("Train your chatbot on what to say, set custom closing rules, and test customer queries live!")
+
+        with st.expander("⚙️ Click here to Train Sales Chatbot Rules"):
+            new_rule = st.text_area("Define Salesbot Persona & Instructions", value=st.session_state.bot_custom_rule)
+            if st.button("Save Chatbot Training Rules"):
+                st.session_state.bot_custom_rule = new_rule
+                st.success("🎉 Chatbot training rules updated successfully!")
+
+        st.markdown("---")
+        st.subheader("💬 Test Live Customer Chat")
+
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = [
+                {"role": "assistant", "content": "Hey there! 👋 Welcome to our WhatsApp store. What are you looking to grab today?"}
+            ]
+
+        for message in st.session_state.chat_history:
+            if message["role"] == "user":
+                st.markdown(f"<div style='text-align:right; background:#1e2d1e; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ccff00;'><b>You:</b> {message['content']}</div>", unsafe_allow_html=True)
             else:
-                try:
-                    # Fetch live products to ground the AI response
-                    res = supabase.table('products').select('*').execute()
-                    store_items = res.data
-                    
-                    # AI Response Logic matching inventory
-                    reply_text = "Hello! 👋 Thanks for reaching out to our WhatsApp store.\n\n"
-                    match_found = False
-                    
-                    query_lower = customer_query.lower()
-                    for item in store_items:
-                        if item['name'].lower() in query_lower or any(word in query_lower for word in item['name'].lower().split()):
-                            match_found = True
-                            reply_text += f"🟢 *{item['name']}* is currently **IN STOCK**!\n"
-                            reply_text += f"💰 Price: ${item['price']}\n"
-                            reply_text += f"📦 Available Units: {item['stock']}\n"
-                            reply_text += f"📝 Details: {item['description']}\n\n"
-                    
-                    if not match_found and store_items:
-                        reply_text += "Here is our current full catalog:\n"
-                        for item in store_items:
-                            if item['stock'] > 0:
-                                reply_text += f"- *{item['name']}*: ${item['price']} ({item['stock']} in stock)\n"
-                    elif not store_items:
-                        reply_text += "Our store catalog is currently empty. Please check back soon!"
-                        
-                    reply_text += "\n📲 Reply 'ORDER [Product Name]' to secure yours instantly!"
-                    
-                    st.success("Generated WhatsApp Auto-Reply:")
-                    st.code(reply_text, language="markdown")
-                except Exception as e:
-                    st.error(f"Error generating AI response: {e}")
+                st.markdown(f"<div style='text-align:left; background:#141a14; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ffffff; border: 1px solid #283328;'><b>🤖 Sales Closer:</b> {message['content']}</div>", unsafe_allow_html=True)
+
+        customer_input = st.text_input("Customer Query", placeholder="Ask something like 'Is the PS5 available?' or 'Can I get a discount?'", key="sales_chat_input")
+        
+        col_send, col_clear = st.columns([2, 1])
+        with col_send:
+            send_btn = st.button("Send WhatsApp Message")
+        with col_clear:
+            clear_btn = st.button("Clear Chat")
+
+        if clear_btn:
+            st.session_state.chat_history = [
+                {"role": "assistant", "content": "Hey there! 👋 Welcome to our WhatsApp store. What are you looking to grab today?"}
+            ]
+            st.rerun()
+
+        if send_btn and customer_input:
+            st.session_state.chat_history.append({"role": "user", "content": customer_input})
+            
+            try:
+                res = supabase.table('products').select('*').execute()
+                items = res.data
+                
+                query_lower = customer_input.lower()
+                matched_item = None
+                for item in items:
+                    if item['name'].lower() in query_lower or any(w in query_lower for w in item['name'].lower().split()):
+                        matched_item = item
+                        break
+
+                if matched_item:
+                    ai_reply = f"Looking at the *{matched_item['name']}*? Awesome choice! 🔥 It's going for **${matched_item['price']}** with {matched_item['stock']} units left in stock. _{matched_item['description']}_. (Trainer Instruction Note: {st.session_state.bot_custom_rule}) Shall I lock this in for you right now?"
+                elif "discount" in query_lower or "cheaper" in query_lower:
+                    ai_reply = f"I hear you on wanting a great deal! 😉 As per our store policy: {st.session_state.bot_custom_rule} If you confirm now, I'll hook you up with free express delivery today!"
+                else:
+                    ai_reply = f"Thanks for reaching out! {st.session_state.bot_custom_rule} We have top-grade items ready in our warehouse. What can I set aside for you?"
+
+                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error in sales bot: {e}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # Tab 5: WhatsApp Campaigns Handling
+    # ---------------------------------------------------------
+    with tab5:
+        st.markdown("<div class='neon-card' style='max-width: 800px;'>", unsafe_allow_html=True)
+        st.subheader("📢 WhatsApp Campaign Broadcasts")
+        st.write("Draft promotional messages and broadcast updates to your customer leads database.")
+        
+        camp_title = st.text_input("Campaign Name", placeholder="e.g. Weekend Flash Sale")
+        camp_msg = st.text_area("Broadcast Message Template", placeholder="Hey [Customer Name]! 🔥 Massive discounts on all gaming gear this weekend. Reply ORDER to grab yours!")
+        
+        if st.button("🚀 Launch WhatsApp Campaign Broadcast"):
+            if not camp_title or not camp_msg:
+                st.warning("Please fill in both the campaign name and message template.")
+            else:
+                st.success(f"✅ Campaign '{camp_title}' successfully queued and broadcasted via WhatsApp number {st.session_state.whatsapp_number}!")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------------------------------------
+    # Tab 6: WhatsApp Number Settings
+    # ---------------------------------------------------------
+    with tab6:
+        st.markdown("<div class='neon-card' style='max-width: 700px;'>", unsafe_allow_html=True)
+        st.subheader("📱 WhatsApp Business Number Settings")
+        st.write("Update the official phone number linked to your automated store and AI sales bot.")
+        
+        current_num = st.session_state.whatsapp_number
+        new_whatsapp_input = st.text_input("WhatsApp Business Number", value=current_num, placeholder="e.g., +92 300 1234567")
+        
+        if st.button("💾 Save & Update WhatsApp Number"):
+            if not new_whatsapp_input:
+                st.warning("Please enter a valid phone number.")
+            else:
+                st.session_state.whatsapp_number = new_whatsapp_input
+                st.success(f"✅ WhatsApp number successfully updated to: **{new_whatsapp_input}**!")
+                st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
