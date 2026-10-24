@@ -79,9 +79,84 @@ def generate_smart_sales_response(prompt, items):
 
     if is_urdu:
         if matched_item:
-            return f"Waalikum Assalam! Ji bilkul, *{matched_item['name']}* available hai! Price: **${matched_item['price']}** | Stock: **{matched_item['stock']} units**.\n\nFeatures & Colors: _{matched_item['description']}_\n\nKia order confirm kar dein?"
+            return f"Waalikum Assalam! Ji bilkul, {matched_item['name']} available hai! Price: ${matched_item['price']} | Stock: {matched_item['stock']} units.\n\nFeatures & Colors: {matched_item['description']}\n\nKia order confirm kar dein?"
         return "Ji bilkul! Humare products premium features aur multiple colors mein available hain. Aapko kis product ki details chahiye?"
     else:
         if matched_item:
-            return f"Hello! Yes, *{matched_item['name']}* is in stock! Price: **${matched_item['price']}** ({matched_item['stock']} left).\n\nFeatures & Colors: _{matched_item['description']}_\n\nShall I lock this order for you?"
-        return "Hello! 👋 Welcome to our store. Check out our latest inventory items and let me
+            return f"Hello! Yes, {matched_item['name']} is in stock! Price: ${matched_item['price']} ({matched_item['stock']} left).\n\nFeatures & Colors: {matched_item['description']}\n\nShall I lock this order for you?"
+        return "Hello! Welcome to our store. Check out our latest inventory items and let me know what you would like to reserve today!"
+
+# ---------------------------------------------------------
+# View 1: Landing Page
+# ---------------------------------------------------------
+if st.session_state.page == "landing" and not st.session_state.logged_in:
+    st.markdown("<div class='neon-card' style='text-align:center;'><h2>Welcome to <span style='color:#ccff00;'>WhatsApp</span> SaaS Portal</h2><p>Manage your AI-powered store and live inventory easily.</p></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        if st.button("🚀 Join Now"):
+            st.session_state.page = "signup"
+            st.rerun()
+        if st.button("🔑 Login"):
+            st.session_state.page = "login"
+            st.rerun()
+
+# ---------------------------------------------------------
+# View 2: Sign Up
+# ---------------------------------------------------------
+elif st.session_state.page == "signup" and not st.session_state.logged_in:
+    st.markdown("<div class='neon-card' style='text-align:center;'><h2>Create Account</h2></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        with st.form("signup_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            agree = st.checkbox("I agree to Privacy Policy")
+            submitted = st.form_submit_button("Create Account")
+            if submitted:
+                if email and password and agree:
+                    try:
+                        supabase.table("users").insert({"email": email, "password": password}).execute()
+                        st.success("Account created! Please login.")
+                        st.session_state.page = "login"
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                else:
+                    st.warning("Please fill all fields and accept policy.")
+        if st.button("Back to Login"):
+            st.session_state.page = "login"
+            st.rerun()
+
+# ---------------------------------------------------------
+# View 3: Login
+# ---------------------------------------------------------
+elif st.session_state.page == "login" and not st.session_state.logged_in:
+    st.markdown("<div class='neon-card' style='text-align:center;'><h2>Login to Portal</h2></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        with st.form("login_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Login")
+            if submitted:
+                try:
+                    res = supabase.table("users").select("*").eq("email", email).eq("password", password).execute()
+                    if res.data:
+                        st.session_state.logged_in = True
+                        st.session_state.user_email = email
+                        st.session_state.page = "dashboard"
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+        if st.button("Create Account instead"):
+            st.session_state.page = "signup"
+            st.rerun()
+
+# ---------------------------------------------------------
+# View 4: Dashboard
+# ---------------------------------------------------------
+elif st.session_state.logged_in:
+    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
+    st.sidebar.
