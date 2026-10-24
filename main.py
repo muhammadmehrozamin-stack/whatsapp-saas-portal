@@ -112,20 +112,18 @@ if 'whatsapp_number' not in st.session_state:
 
 if 'bot_custom_rule' not in st.session_state:
     st.session_state.bot_custom_rule = (
-        "You are an elite, intelligent AI sales closer. Answer any customer question in any language (English, Urdu, Arabic, etc.), "
-        "be extremely helpful and friendly like Gemini, and seamlessly bridge the conversation back to our live store products to close the sale."
+        "You are an elite AI sales closer. Answer any customer question in any language (English, Urdu, Arabic, etc.), "
+        "be extremely helpful and friendly, and seamlessly bridge the conversation back to our live store products and colors to close the sale."
     )
 
 # ---------------------------------------------------------
-# Advanced Intelligent Multilingual Sales Engine
+# Intelligent Multilingual Sales Engine (Cleaned: No trainer text in replies)
 # ---------------------------------------------------------
-def generate_smart_sales_response(prompt, items, custom_rule):
+def generate_smart_sales_response(prompt, items):
     prompt_lower = prompt.lower()
     
-    # Detect language / greetings
-    is_urdu_hindi = any(word in prompt_lower for word in ['aoa', 'kya', 'hai', 'kaise', 'bhai', 'price', 'kitna', 'mujhe', 'chahiye'])
+    is_urdu_hindi = any(word in prompt_lower for word in ['aoa', 'kya', 'hai', 'kaise', 'bhai', 'price', 'kitna', 'mujhe', 'chahiye', 'colour', 'rang', 'features'])
     
-    # Match product
     matched_item = None
     for item in items:
         if item['name'].lower() in prompt_lower or any(w in prompt_lower for w in item['name'].lower().split()):
@@ -134,20 +132,24 @@ def generate_smart_sales_response(prompt, items, custom_rule):
 
     if is_urdu_hindi:
         if matched_item:
-            return f"Waalikum Assalam! Ji bilkul, *{matched_item['name']}* hamare paas available hai! 🔥 Price sirf **${matched_item['price']}** hai aur stock mein **{matched_item['stock']} units** baqi hain. _{matched_item['description']}_. \n\n*(Trainer Rule: {custom_rule})*\n\nKia mein apka order confirm kar dun taake express delivery karwa dein?"
-        elif any(w in prompt_lower for w in ['kaise', 'haal', 'kya ho raha']):
-            return f"Alhamdulillah bilkul theek! Aap sunayein, aaj aapko konsi gaming gear ya item chahiye? Humare paas best items mojood hain. *(Trainer Rule: {custom_rule})*"
+            return f"Waalikum Assalam! Ji bilkul, *{matched_item['name']}* available hai! 🔥 Price sirf **${matched_item['price']}** hai aur stock mein **{matched_item['stock']} units** baqi hain. \n\n📝 Details & Features: _{matched_item['description']}_\n\nKia mein apka order confirm kar dun taake express delivery karwa dein?"
+        elif any(w in prompt_lower for w in ['colour', 'rang', 'features', 'details', 'batao']):
+            return f"Ji bilkul! Humare paas jo items available hain unki premium build quality, multiple color options, aur advanced features hain. Aapko kis specific product ka color ya feature pochna hai?"
+        elif any(w in prompt_lower for w in ['kaise', 'haal']):
+            return f"Alhamdulillah bilkul theek! Aap sunayein, aaj aapko konsi item chahiye? Humare paas best products mojood hain."
         else:
             best_item = items[0] if items else {"name": "Gaming Product", "price": "200,000", "stock": 10}
-            return f"Aapka sawal bohat acha hai! Humare store par is waqt top-rated **{best_item['name']}** mojood hai sirf **${best_item['price']}** mein. *(Trainer Rule: {custom_rule})* Bataiye, kya isko lock kar dein?"
+            return f"Aapka sawal bohat acha hai! Humare store par is waqt top-rated **{best_item['name']}** mojood hai sirf **${best_item['price']}** mein. Bataiye, kya isko lock kar dein?"
     else:
         if matched_item:
-            return f"Hello! Yes, the *{matched_item['name']}* is currently in stock! 🔥 Price is **${matched_item['price']}** with {matched_item['stock']} units ready. _{matched_item['description']}_. \n\n*(Trainer Rule: {custom_rule})*\n\nShall I lock this order in for you right now?"
+            return f"Hello! Yes, the *{matched_item['name']}* is currently in stock! 🔥 Price is **${matched_item['price']}** with {matched_item['stock']} units ready. \n\n📝 Features & Details: _{matched_item['description']}_\n\nShall I lock this order in for you right now?"
+        elif any(w in prompt_lower for w in ['colour', 'color', 'features', 'specs']):
+            return f"Our products feature top-tier premium finishes, multi-color availability, and high-performance specs! Let me know which product you're looking at and I'll give you all the details."
         elif "hello" in prompt_lower or "hi" in prompt_lower:
-            return f"Hello! 👋 Welcome to our store. How can I help you today? *(Trainer Rule: {custom_rule})*"
+            return f"Hello! 👋 Welcome to our store. How can I help you close a great deal today?"
         else:
             best_item = items[0] if items else {"name": "Gaming Gear", "price": "200,000"}
-            return f"That's a fascinating question! Regarding your query, while we assist with that, I also wanted to highlight our best-selling **{best_item['name']}** for **${best_item['price']}**. *(Trainer Rule: {custom_rule})* Would you like me to reserve one for you today?"
+            return f"That's a great question! Regarding your query, while we assist with that, I wanted to highlight our best-selling **{best_item['name']}** for **${best_item['price']}**. Would you like me to reserve one for you today?"
 
 # ---------------------------------------------------------
 # View 1: Landing Page
@@ -278,207 +280,4 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
 # View 4: Dashboard with 6 Specialized Tabs
 # ---------------------------------------------------------
 elif st.session_state.logged_in:
-    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
-    st.sidebar.markdown(f"📱 **WhatsApp:** `{st.session_state.whatsapp_number}`")
-    if st.sidebar.button('Logout'):
-        st.session_state.logged_in = False
-        st.session_state.page = 'landing'
-        st.rerun()
-
-    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Smart Sales Portal</h2>", unsafe_allow_html=True)
-    st.write("")
-
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        '📊 Overview', 
-        '➕ Add & Edit', 
-        '📦 Live Products', 
-        '🤖 Smart Sales Bot', 
-        '📢 Campaigns',
-        '📱 WhatsApp & Trainer'
-    ])
-
-    # ---------------------------------------------------------
-    # Tab 1: Overview
-    # ---------------------------------------------------------
-    with tab1:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("📊 Dashboard Overview")
-        try:
-            res = supabase.table('products').select('*').execute()
-            prods = res.data
-            total_items = len(prods) if prods else 0
-            total_stock = sum([p.get('stock', 0) for p in prods]) if prods else 0
-            
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.metric("Total Store Products", total_items)
-            with col_b:
-                st.metric("Total Warehouse Stock", total_stock)
-                
-            st.success("🟢 Supabase & Smart Sales Bot Fully Synced")
-        except Exception as e:
-            st.error(f"Error loading overview stats: {e}")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # Tab 2: Add & Edit Product
-    # ---------------------------------------------------------
-    with tab2:
-        st.markdown("<div class='neon-card' style='max-width:800px;'>", unsafe_allow_html=True)
-        st.subheader('➕ Add a New Product')
-        with st.form('add_product_form', clear_on_submit=True):
-            p_name = st.text_input('Product Name')
-            p_price = st.number_input('Price ($)', min_value=0.0, step=1.0)
-            p_stock = st.number_input('Stock Quantity', min_value=0, step=1)
-            p_desc = st.text_area('Product Description')
-            
-            submit_prod = st.form_submit_button('Add Product to Store')
-
-            if submit_prod:
-                if not p_name:
-                    st.error('Product name is required.')
-                else:
-                    try:
-                        supabase.table('products').insert({
-                            'name': p_name,
-                            'price': p_price,
-                            'stock': p_stock,
-                            'description': p_desc
-                        }).execute()
-                        st.success(f"Successfully added '{p_name}' to inventory!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'Failed to add product: {e}')
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<div class='neon-card' style='max-width:800px;'>", unsafe_allow_html=True)
-        st.subheader('✏️ Manage Product Details')
-        try:
-            resp = supabase.table('products').select('*').execute()
-            if resp.data:
-                df_edit = pd.DataFrame(resp.data)
-                edited_grid = st.data_editor(df_edit, num_rows='dynamic', key='manage_products_grid', use_container_width=True)
-                
-                if st.button('💾 Save Product Edits'):
-                    try:
-                        for idx, row in edited_grid.iterrows():
-                            if 'id' in row and pd.notnull(row['id']):
-                                supabase.table('products').update({
-                                    'name': row.get('name'),
-                                    'price': row.get('price'),
-                                    'stock': row.get('stock'),
-                                    'description': row.get('description')
-                                }).eq('id', row['id']).execute()
-                        st.success('Product details updated successfully!')
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'Error saving edits: {e}')
-            else:
-                st.info("No products found to edit.")
-        except Exception as e:
-            st.error(f"Error loading inventory editor: {e}")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # Tab 3: Live Products
-    # ---------------------------------------------------------
-    with tab3:
-        st.markdown("<div class='neon-card' style='max-width: 900px;'>", unsafe_allow_html=True)
-        st.subheader('📦 Live Inventory Manager')
-        try:
-            response = supabase.table('products').select('*').execute()
-            data = response.data
-            if data:
-                df = pd.DataFrame(data)
-                st.dataframe(df, use_container_width=True)
-            else:
-                st.info("No products found in live store.")
-        except Exception as e:
-            st.error(f'Error loading products: {e}')
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # Tab 4: Smart Sales Bot & Chat
-    # ---------------------------------------------------------
-    with tab4:
-        st.markdown("<div class='neon-card' style='max-width: 850px;'>", unsafe_allow_html=True)
-        st.subheader("🤖 Smart Multilingual Sales Bot")
-        st.write("Test customer queries in any language (English, Urdu/Roman Urdu, etc.). The bot answers intelligently and closes sales using live inventory.")
-
-        if "chat_history" not in st.session_state:
-            st.session_state.chat_history = [
-                {"role": "assistant", "content": "👋 Hello! Ask me anything in any language. I'm ready to assist and close sales!"}
-            ]
-
-        for message in st.session_state.chat_history:
-            if message["role"] == "user":
-                st.markdown(f"<div style='text-align:right; background:#1e2d1e; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ccff00;'><b>Customer:</b> {message['content']}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div style='text-align:left; background:#141a14; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ffffff; border: 1px solid #283328;'><b>🤖 Sales Closer:</b> {message['content']}</div>", unsafe_allow_html=True)
-
-        customer_input = st.text_input("Ask a question or raise a query", placeholder="e.g., Aoa kya haal hai / Is the PS5 in stock?", key="sales_chat_input")
-        
-        col_send, col_clear = st.columns([2, 1])
-        with col_send:
-            send_btn = st.button("Send to Sales Bot")
-        with col_clear:
-            clear_btn = st.button("Clear Chat")
-
-        if clear_btn:
-            st.session_state.chat_history = [
-                {"role": "assistant", "content": "👋 Hello! Ask me anything in any language. I'm ready to assist and close sales!"}
-            ]
-            st.rerun()
-
-        if send_btn and customer_input:
-            st.session_state.chat_history.append({"role": "user", "content": customer_input})
-            
-            try:
-                res = supabase.table('products').select('*').execute()
-                items = res.data if res.data else []
-
-                ai_reply = generate_smart_sales_response(
-                    customer_input, 
-                    items, 
-                    st.session_state.bot_custom_rule
-                )
-
-                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error in sales bot: {e}")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # Tab 5: Campaigns
-    # ---------------------------------------------------------
-    with tab5:
-        st.markdown("<div class='neon-card' style='max-width: 800px;'>", unsafe_allow_html=True)
-        st.subheader("📢 WhatsApp Campaign Broadcasts")
-        camp_title = st.text_input("Campaign Name", placeholder="e.g. Flash Sale")
-        camp_msg = st.text_area("Broadcast Message Template", placeholder="Hello! Massive discounts available now.")
-        if st.button("🚀 Launch Campaign"):
-            if camp_title and camp_msg:
-                st.success(f"✅ Campaign '{camp_title}' broadcasted via {st.session_state.whatsapp_number}!")
-            else:
-                st.warning("Please fill in all fields.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # Tab 6: WhatsApp & AI Trainer Settings
-    # ---------------------------------------------------------
-    with tab6:
-        st.markdown("<div class='neon-card' style='max-width: 750px;'>", unsafe_allow_html=True)
-        st.subheader("⚙️ WhatsApp & AI Sales Trainer")
-        st.write("Update your business number and train your sales chatbot rules on the fly.")
-        
-        new_whatsapp_input = st.text_input("WhatsApp Business Number", value=st.session_state.whatsapp_number)
-        rule_input = st.text_area("Sales Bot Persona & Closing Rules", value=st.session_state.bot_custom_rule)
-        
-        if st.button("💾 Save Settings & Training Rules"):
-            st.session_state.whatsapp_number = new_whatsapp_input
-            st.session_state.bot_custom_rule = rule_input
-            st.success("🎉 Settings and sales training rules updated successfully!")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"### 👤 {st.
