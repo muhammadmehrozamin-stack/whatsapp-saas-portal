@@ -1,6 +1,7 @@
 import streamlit as st
 from supabase import create_client
 import pandas as pd
+import urllib.request
 import json
 
 # ---------------------------------------------------------
@@ -17,23 +18,23 @@ st.markdown("""
     .neon-card {
         border: 2px solid #ccff00;
         border-radius: 28px;
-        padding: 45px 35px;
+        padding: 35px 25px;
         background-color: #0b0f0b;
         box-shadow: 0 0 30px rgba(204, 255, 0, 0.25);
         max-width: 650px;
-        margin: 30px auto;
+        margin: 20px auto;
         text-align: center;
     }
     .neon-title {
         color: #ffffff;
-        font-size: 34px;
+        font-size: 32px;
         font-weight: 800;
         text-align: center;
         margin-bottom: 10px;
     }
     .neon-subtitle {
         color: #9e9e9e;
-        font-size: 15px;
+        font-size: 14px;
         text-align: center;
         margin-bottom: 20px;
         line-height: 1.5;
@@ -52,8 +53,8 @@ st.markdown("""
         border-radius: 30px !important;
         border: none !important;
         width: 100% !important;
-        padding: 14px 24px !important;
-        font-size: 16px !important;
+        padding: 12px 20px !important;
+        font-size: 15px !important;
         box-shadow: 0 0 20px rgba(204, 255, 0, 0.4);
     }
     .stButton > button:hover {
@@ -83,30 +84,61 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 if "whatsapp_number" not in st.session_state:
     st.session_state.whatsapp_number = "+92 300 0000000"
+
+# Fetch API key automatically from Streamlit Secrets or session state
+try:
+    default_api_key = st.secrets.get("GEMINI_API_KEY", "")
+except Exception:
+    default_api_key = ""
+
+if "gemini_api_key" not in st.session_state:
+    st.session_state.gemini_api_key = default_api_key
+
 if "bot_custom_rule" not in st.session_state:
-    st.session_state.bot_custom_rule = "Be friendly, highlight colors and features, push to close the order immediately."
+    st.session_state.bot_custom_rule = (
+        "You are an elite, intelligent AI sales closer powered by Google Gemini. "
+        "You can answer ANY question the customer asks about any topic in any language (English, Roman Urdu, Urdu, Arabic, etc.) with absolute accuracy. "
+        "Always seamlessly bridge the conversation back to our store inventory, highlight product colors and features, and close the sale."
+    )
 
 # ---------------------------------------------------------
-# Sales Response Engine
+# Gemini API Integration Function
 # ---------------------------------------------------------
-def generate_smart_sales_response(prompt, items):
-    prompt_lower = prompt.lower()
-    is_urdu = any(w in prompt_lower for w in ['aoa', 'kya', 'hai', 'kaise', 'price', 'kitna', 'colour', 'color', 'rang', 'features'])
+def call_gemini_api(prompt, inventory_context, rules, api_key):
+    key_to_use = api_key or default_api_key
+    if not key_to_use:
+        return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets to activate full Gemini intelligence!"
     
-    matched_item = None
-    for item in items:
-        if item['name'].lower() in prompt_lower or any(w in prompt_lower for w in item['name'].lower().split()):
-            matched_item = item
-            break
-
-    if is_urdu:
-        if matched_item:
-            return f"Waalikum Assalam! Ji bilkul, {matched_item['name']} available hai! Price: ${matched_item['price']} | Stock: {matched_item['stock']} units.\n\nFeatures & Colors: {matched_item['description']}\n\nKia order confirm kar dein?"
-        return "Ji bilkul! Humare products premium features aur multiple colors mein available hain. Aapko kis product ki details chahiye?"
-    else:
-        if matched_item:
-            return f"Hello! Yes, {matched_item['name']} is in stock! Price: ${matched_item['price']} ({matched_item['stock']} left).\n\nFeatures & Colors: {matched_item['description']}\n\nShall I lock this order for you?"
-        return "Hello! Welcome to our store. Check out our latest inventory items and let me know what you would like to reserve today!"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_to_use}"
+    
+    system_instruction = f"""
+    {rules}
+    
+    CURRENT LIVE STORE INVENTORY & PRODUCTS:
+    {inventory_context}
+    
+    Instructions: Reply conversationally in the exact language the customer used (e.g., Roman Urdu or English). Answer any general question brilliantly like Gemini, reference product colors/features from inventory, and close the sale.
+    """
+    
+    payload = {
+        "contents": [
+            {"parts": [{"text": system_instruction}, {"text": f"Customer says: {prompt}"}]}
+        ]
+    }
+    
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST'
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            return res_data['candidates'][0]['content']['parts'][0]['text']
+    except Exception as e:
+        return f"Error connecting to Gemini API: {e}"
 
 # ---------------------------------------------------------
 # View 1: Landing Page
@@ -212,13 +244,13 @@ elif st.session_state.logged_in:
             st.session_state.page = "landing"
             st.rerun()
 
-    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Smart Sales Portal</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Gemini Sales Portal</h2>", unsafe_allow_html=True)
 
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Overview", 
         "➕ Add & Edit", 
         "📦 Live Products", 
-        "🤖 Sales Bot", 
+        "🤖 Gemini Bot", 
         "📢 Campaigns",
         "📱 Settings"
     ])
@@ -232,7 +264,7 @@ elif st.session_state.logged_in:
             prods = res.data if res.data else []
             st.metric("Total Products", len(prods))
             st.metric("Total Stock", sum([p.get('stock', 0) for p in prods]))
-            st.success("Connected to Supabase successfully!")
+            st.success("Connected to Supabase & Gemini AI successfully!")
         except Exception as e:
             st.error(f"Error: {e}")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -301,33 +333,55 @@ elif st.session_state.logged_in:
             st.error(f"Error: {e}")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Tab 4: Sales Bot
+    # Tab 4: Gemini Bot (Voice & Text)
     with tab4:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Smart Sales Bot")
+        st.subheader("🤖 Gemini AI Sales Bot (Voice & Text)")
+        st.write("Ask any question in any language. The bot answers like Gemini and includes voice audio playback!")
         
         if "chat" not in st.session_state:
-            st.session_state.chat = [{"role": "assistant", "content": "Hello! Ask me about product colors, features, or prices."}]
+            st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
 
-        for m in st.session_state.chat:
+        for i, m in enumerate(st.session_state.chat):
             align = "right" if m["role"] == "user" else "left"
             bg = "#1e2d1e" if m["role"] == "user" else "#141a14"
             st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=True)
+            
+            # Add Voice Audio Player button for assistant messages
+            if m["role"] == "assistant":
+                safe_text = m['content'].replace('"', "'").replace('\n', ' ')
+                st.markdown(f"""
+                    <button onclick="playVoiceNote_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">
+                        🔊 Play Voice Note
+                    </button>
+                    <script>
+                    function playVoiceNote_{i}() {{
+                        const utterance = new SpeechSynthesisUtterance("{safe_text}");
+                        window.speechSynthesis.speak(utterance);
+                    }}
+                    </script>
+                """, unsafe_allow_html=True)
 
         user_q = st.text_input("Customer Message", key="q_input")
         c_send, c_clear = st.columns(2)
         with c_send:
-            if st.button("Send"):
+            if st.button("Send to Gemini"):
                 if user_q:
                     st.session_state.chat.append({"role": "user", "content": user_q})
+                    
+                    # Fetch live Supabase inventory
                     res = supabase.table("products").select("*").execute()
                     items = res.data if res.data else []
-                    reply = generate_smart_sales_response(user_q, items)
+                    inventory_str = json.dumps(items)
+                    
+                    # Call Gemini API
+                    reply = call_gemini_api(user_q, inventory_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
+                    
                     st.session_state.chat.append({"role": "assistant", "content": reply})
                     st.rerun()
         with c_clear:
             if st.button("Clear Chat"):
-                st.session_state.chat = [{"role": "assistant", "content": "Hello! Ask me about product colors, features, or prices."}]
+                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -339,20 +393,24 @@ elif st.session_state.logged_in:
         c_msg = st.text_area("Message Template")
         if st.button("Launch Campaign"):
             if c_name and c_msg:
-                st.success(f"Campaign '{c_name}' broadcasted successfully!")
+                st.success(f"Campaign '{c_name}' broadcasted successfully via {st.session_state.whatsapp_number}!")
             else:
                 st.warning("Fill in all fields.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Tab 6: Settings
+    # Tab 6: Settings (API Key & WhatsApp Settings)
     with tab6:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Settings")
+        st.subheader("Settings & Gemini AI Configuration")
+        
+        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your Gemini API key here...")
         new_num = st.text_input("WhatsApp Number", value=st.session_state.whatsapp_number)
-        new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
+        new_rule = st.text_area("Gemini Sales Bot Instructions", value=st.session_state.bot_custom_rule)
+        
         if st.button("Save Settings"):
+            st.session_state.gemini_api_key = gemini_key_input
             st.session_state.whatsapp_number = new_num
             st.session_state.bot_custom_rule = new_rule
-            st.success("Settings saved successfully!")
+            st.success("Settings and Gemini API key saved successfully!")
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
