@@ -145,7 +145,11 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                 if verify_btn:
                     if entered_otp == st.session_state.generated_otp:
                         try:
-                            supabase.table("users").insert({"email": st.session_state.temp_email, "password": st.session_state.temp_password, "whatsapp_number": st.session_state.temp_whatsapp}).execute()
+                            supabase.table("users").insert({
+                                "email": st.session_state.temp_email, 
+                                "password": st.session_state.temp_password, 
+                                "whatsapp_number": st.session_state.temp_whatsapp
+                            }).execute()
                             st.success("Account created successfully!")
                             st.session_state.signup_step = "form"
                             st.session_state.page = "login"
@@ -237,7 +241,12 @@ elif st.session_state.logged_in:
                 if p_name:
                     try:
                         img_name = p_img.name if p_img else "No image"
-                        supabase.table("products").insert({"name": p_name, "price": p_price, "stock": p_stock, "description": f"{p_desc} [Image: {img_name}]"}).execute()
+                        supabase.table("products").insert({
+                            "name": p_name, 
+                            "price": p_price, 
+                            "stock": p_stock, 
+                            "description": f"{p_desc} [Image: {img_name}]"
+                        }).execute()
                         st.success("Added product successfully!")
                         st.rerun()
                     except Exception as e:
@@ -256,4 +265,162 @@ elif st.session_state.logged_in:
                 if st.button("Save Edits"):
                     for _, row in edited.iterrows():
                         if 'id' in row and pd.notnull(row['id']):
-                            supabase.table("products").update({"name": row.get("name"), "price": row
+                            supabase.table("products").update({
+                                "name": row.get("name"), 
+                                "price": row.get("price"), 
+                                "stock": row.get("stock"), 
+                                "description": row.get("description")
+                            }).eq("id", row["id"]).execute()
+                    st.success("Changes saved!")
+                    st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab3:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                st.dataframe(pd.DataFrame(resp.data), use_container_width=True)
+            else:
+                st.info("No products found.")
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab4:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("🧠 Train Bot & Custom Q&A")
+        st.write("Add manual answers so your bot always answers specific questions exactly how you want.")
+        
+        with st.form("train_form", clear_on_submit=True):
+            t_question = st.text_input("Customer Question / Keyword")
+            t_answer = st.text_area("Exact Answer Bot Should Give")
+            if st.form_submit_button("Save Training Rule"):
+                if t_question and t_answer:
+                    try:
+                        supabase.table("training_faqs").insert({
+                            "question": t_question, 
+                            "answer": t_answer
+                        }).execute()
+                        st.success("Training rule saved successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error saving rule: {e}")
+                else:
+                    st.warning("Please fill in both question and answer.")
+        
+        st.markdown("---")
+        st.subheader("Saved Training Rules")
+        try:
+            train_resp = supabase.table("training_faqs").select("*").execute()
+            if train_resp.data:
+                st.dataframe(pd.DataFrame(train_resp.data), use_container_width=True)
+            else:
+                st.info("No custom training rules added yet.")
+        except Exception as e:
+            st.info("Training table will populate once rules are added.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab5:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("🤖 AI Sales Bot (Groq Llama 3)")
+        st.write("Ask any question. The bot references live inventory and your manual training rules!")
+        
+        if "chat" not in st.session_state:
+            st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
+
+        for i, m in enumerate(st.session_state.chat):
+            align = "right" if m["role"] == "user" else "left"
+            bg = "#1e2d1e" if m["role"] == "user" else "#141a14"
+            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=True)
+            
+            if m["role"] == "assistant":
+                safe_text = m['content'].replace('"', "'").replace('\n', ' ')
+                voice_btn_html = f'<button onclick="play_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">🔊 Play Voice Note</button><script>function play_{i}() {{ const u = new SpeechSynthesisUtterance("{safe_text}"); window.speechSynthesis.speak(u); }}</script>'
+                st.markdown(voice_btn_html, unsafe_allow_html=True)
+
+        user_q = st.text_input("Customer Message", key="q_input")
+        c_send, c_clear = st.columns(2)
+        with c_send:
+            if st.button("Send to AI"):
+                if user_q:
+                    st.session_state.chat.append({"role": "user", "content": user_q})
+                    
+                    # Fetch inventory
+                    res = supabase.table("products").select("*").execute()
+                    items = res.data if res.data else []
+                    inventory_str = json.dumps(items)
+                    
+                    # Fetch training FAQs
+                    training_str = ""
+                    try:
+                        t_res = supabase.table("training_faqs").select("*").execute()
+                        if t_res.data:
+                            training_str = json.dumps(t_res.data)
+                    except Exception:
+                        pass
+                    
+                    reply = call_groq_api(user_q, inventory_str, training_str, st.session_state.bot_custom_rule, st.session_state.groq_api_key)
+                    st.session_state.chat.append({"role": "assistant", "content": reply})
+                    st.rerun()
+        with c_clear:
+            if st.button("Clear Chat"):
+                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab6:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("WhatsApp Campaigns")
+        c_name = st.text_input("Campaign Title")
+        c_msg = st.text_area("Message Template")
+        if st.button("Launch Campaign"):
+            if c_name and c_msg:
+                st.success(f"Campaign '{c_name}' broadcasted successfully!")
+            else:
+                st.warning("Fill in all fields.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab7:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Settings & Configuration")
+        
+        groq_key_input = st.text_input("Groq API Key", value=st.session_state.groq_api_key, type="password", placeholder="Paste your Groq API key here (gsk_...)")
+        new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
+        
+        st.markdown("---")
+        st.subheader("📱 Change WhatsApp Number (OTP Required)")
+        pending_num = st.text_input("New WhatsApp Number", value=st.session_state.whatsapp_number)
+        
+        if not st.session_state.settings_otp_step:
+            if st.button("Request OTP"):
+                if pending_num != st.session_state.whatsapp_number:
+                    otp_code = str(random.randint(100000, 999999))
+                    st.session_state.pending_whatsapp = pending_num
+                    st.session_state.settings_otp_code = otp_code
+                    st.session_state.settings_otp_step = True
+                    st.success(f"OTP Code: {otp_code}")
+                    st.rerun()
+                else:
+                    st.info("This is already your current number.")
+        else:
+            st.write("Enter verification code sent to your new WhatsApp")
+            entered_set_otp = st.text_input("Enter OTP", placeholder="123456")
+            if st.button("Verify & Update"):
+                if entered_set_otp == st.session_state.settings_otp_code:
+                    st.session_state.whatsapp_number = st.session_state.pending_whatsapp
+                    st.session_state.settings_otp_step = False
+                    st.success("WhatsApp number updated!")
+                    st.rerun()
+                else:
+                    st.error("Invalid OTP.")
+        
+        st.markdown("---")
+        if st.button("Save Settings"):
+            st.session_state.groq_api_key = groq_key_input
+            st.session_state.bot_custom_rule = new_rule
+            st.success("Settings saved!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
