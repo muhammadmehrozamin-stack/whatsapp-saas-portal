@@ -128,11 +128,7 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                 if verify_btn:
                     if entered_otp == st.session_state.generated_otp:
                         try:
-                            supabase.table("users").insert({
-                                "email": st.session_state.temp_email,
-                                "password": st.session_state.temp_password,
-                                "whatsapp_number": st.session_state.temp_whatsapp
-                            }).execute()
+                            supabase.table("users").insert({"email": st.session_state.temp_email, "password": st.session_state.temp_password, "whatsapp_number": st.session_state.temp_whatsapp}).execute()
                             st.success("Account created successfully!")
                             st.session_state.signup_step = "form"
                             st.session_state.page = "login"
@@ -201,4 +197,153 @@ elif st.session_state.logged_in:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.subheader("Dashboard Overview")
         try:
-            res =
+            res = supabase.table("products").select("*").execute()
+            prods = res.data if res.data else []
+            st.metric("Total Products", len(prods))
+            st.metric("Total Stock", sum([p.get('stock', 0) for p in prods]))
+            st.success("Connected to Supabase & Gemini successfully!")
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab2:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Add New Product")
+        with st.form("add_prod_form", clear_on_submit=True):
+            p_name = st.text_input("Product Name")
+            p_price = st.number_input("Price ($)", min_value=0.0)
+            p_stock = st.number_input("Stock", min_value=0, step=1)
+            p_desc = st.text_area("Description & Features")
+            p_img = st.file_uploader("Product Image", type=['jpg', 'png'])
+            
+            if st.form_submit_button("Add Product"):
+                if p_name:
+                    try:
+                        img_name = p_img.name if p_img else "No image"
+                        supabase.table("products").insert({"name": p_name, "price": p_price, "stock": p_stock, "description": f"{p_desc} [Image: {img_name}]"}).execute()
+                        st.success("Added product successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                else:
+                    st.warning("Product name required.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Edit Inventory")
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                df = pd.DataFrame(resp.data)
+                edited = st.data_editor(df, key="editor", use_container_width=True)
+                if st.button("Save Edits"):
+                    for _, row in edited.iterrows():
+                        if 'id' in row and pd.notnull(row['id']):
+                            supabase.table("products").update({"name": row.get("name"), "price": row.get("price"), "stock": row.get("stock"), "description": row.get("description")}).eq("id", row["id"]).execute()
+                    st.success("Changes saved!")
+                    st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab3:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                st.dataframe(pd.DataFrame(resp.data), use_container_width=True)
+            else:
+                st.info("No products found.")
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab4:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("🤖 Gemini AI Sales Bot")
+        st.write("Ask any question. The bot references inventory and includes voice playback!")
+        
+        if "chat" not in st.session_state:
+            st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
+
+        for i, m in enumerate(st.session_state.chat):
+            align = "right" if m["role"] == "user" else "left"
+            bg = "#1e2d1e" if m["role"] == "user" else "#141a14"
+            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=True)
+            
+            if m["role"] == "assistant":
+                safe_text = m['content'].replace('"', "'").replace('\n', ' ')
+                voice_btn_html = f'<button onclick="play_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">🔊 Play Voice Note</button><script>function play_{i}() {{ const u = new SpeechSynthesisUtterance("{safe_text}"); window.speechSynthesis.speak(u); }}</script>'
+                st.markdown(voice_btn_html, unsafe_allow_html=True)
+
+        user_q = st.text_input("Customer Message", key="q_input")
+        c_send, c_clear = st.columns(2)
+        with c_send:
+            if st.button("Send to Gemini"):
+                if user_q:
+                    st.session_state.chat.append({"role": "user", "content": user_q})
+                    res = supabase.table("products").select("*").execute()
+                    items = res.data if res.data else []
+                    inventory_str = json.dumps(items)
+                    reply = call_gemini_api(user_q, inventory_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
+                    st.session_state.chat.append({"role": "assistant", "content": reply})
+                    st.rerun()
+        with c_clear:
+            if st.button("Clear Chat"):
+                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab5:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("WhatsApp Campaigns")
+        c_name = st.text_input("Campaign Title")
+        c_msg = st.text_area("Message Template")
+        if st.button("Launch Campaign"):
+            if c_name and c_msg:
+                st.success(f"Campaign '{c_name}' broadcasted successfully!")
+            else:
+                st.warning("Fill in all fields.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab6:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Settings & Configuration")
+        
+        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste Gemini API key...")
+        new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
+        
+        st.markdown("---")
+        st.subheader("📱 Change WhatsApp Number (OTP Required)")
+        pending_num = st.text_input("New WhatsApp Number", value=st.session_state.whatsapp_number)
+        
+        if not st.session_state.settings_otp_step:
+            if st.button("Request OTP"):
+                if pending_num != st.session_state.whatsapp_number:
+                    otp_code = str(random.randint(100000, 999999))
+                    st.session_state.pending_whatsapp = pending_num
+                    st.session_state.settings_otp_code = otp_code
+                    st.session_state.settings_otp_step = True
+                    st.success(f"OTP Code: {otp_code}")
+                    st.rerun()
+                else:
+                    st.info("This is already your current number.")
+        else:
+            st.write("Enter verification code sent to your new WhatsApp")
+            entered_set_otp = st.text_input("Enter OTP", placeholder="123456")
+            if st.button("Verify & Update"):
+                if entered_set_otp == st.session_state.settings_otp_code:
+                    st.session_state.whatsapp_number = st.session_state.pending_whatsapp
+                    st.session_state.settings_otp_step = False
+                    st.success("WhatsApp number updated!")
+                    st.rerun()
+                else:
+                    st.error("Invalid OTP.")
+        
+        st.markdown("---")
+        if st.button("Save Settings"):
+            st.session_state.gemini_api_key = gemini_key_input
+            st.session_state.bot_custom_rule = new_rule
+            st.success("Settings saved!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
