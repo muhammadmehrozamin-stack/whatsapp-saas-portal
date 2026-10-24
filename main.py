@@ -92,4 +92,168 @@ def call_groq_api(prompt, inventory_context, training_context, rules, api_key):
 if st.session_state.page == "landing" and not st.session_state.logged_in:
     st.markdown("""
         <div class='neon-card'>
-            <div
+            <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS Portal</div>
+            <div class='neon-subtitle'>Manage your AI-powered WhatsApp store and live inventory through Supabase.</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        if st.button("🚀 Join Now"):
+            st.session_state.page = "signup"
+            st.session_state.signup_step = "form"
+            st.rerun()
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        if st.button("🔑 Login"):
+            st.session_state.page = "login"
+            st.rerun()
+
+elif st.session_state.page == "signup" and not st.session_state.logged_in:
+    st.markdown("""
+        <div class='neon-card'>
+            <div class='neon-title'>Create Account</div>
+            <div class='neon-subtitle'>Secure registration with WhatsApp verification.</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    c1, c2, c3 = st.columns([1, 2.2, 1])
+    with c2:
+        if st.session_state.signup_step == "form":
+            with st.form("signup_form"):
+                email = st.text_input("Email", placeholder="Enter your email")
+                password = st.text_input("Password", type="password", placeholder="Choose password")
+                whatsapp = st.text_input("WhatsApp Number", placeholder="+92 300 1234567")
+                agree = st.checkbox("I agree to Privacy Policy")
+                submitted = st.form_submit_button("Send OTP Verification")
+                if submitted:
+                    if email and password and whatsapp and agree:
+                        otp = str(random.randint(100000, 999999))
+                        st.session_state.temp_email = email
+                        st.session_state.temp_password = password
+                        st.session_state.temp_whatsapp = whatsapp
+                        st.session_state.generated_otp = otp
+                        st.session_state.signup_step = "otp"
+                        st.success(f"OTP Code: {otp}")
+                        st.rerun()
+                    else:
+                        st.warning("Please fill all fields and accept policy.")
+        else:
+            with st.form("otp_form"):
+                st.write("Enter verification code sent to your WhatsApp")
+                entered_otp = st.text_input("Verification Code", placeholder="123456")
+                verify_btn = st.form_submit_button("Verify & Complete Signup")
+                if verify_btn:
+                    if entered_otp == st.session_state.generated_otp:
+                        try:
+                            supabase.table("users").insert({"email": st.session_state.temp_email, "password": st.session_state.temp_password, "whatsapp_number": st.session_state.temp_whatsapp}).execute()
+                            st.success("Account created successfully!")
+                            st.session_state.signup_step = "form"
+                            st.session_state.page = "login"
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                    else:
+                        st.error("Invalid OTP code.")
+
+        if st.button("⬅ Back to Login"):
+            st.session_state.signup_step = "form"
+            st.session_state.page = "login"
+            st.rerun()
+
+elif st.session_state.page == "login" and not st.session_state.logged_in:
+    st.markdown("""
+        <div class='neon-card'>
+            <div class='neon-title'>Welcome Back</div>
+            <div class='neon-subtitle'>Sign in to your dashboard.</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    c1, c2, c3 = st.columns([1, 2.2, 1])
+    with c2:
+        with st.form("login_form"):
+            email = st.text_input("Email", placeholder="Enter your email", value="focusevingcoaching@gmail.com")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            submitted = st.form_submit_button("Login")
+            if submitted:
+                if email:
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = email
+                    try:
+                        res = supabase.table("users").select("whatsapp_number").eq("email", email).execute()
+                        if res.data and res.data[0].get("whatsapp_number"):
+                            st.session_state.whatsapp_number = res.data[0].get("whatsapp_number")
+                    except Exception:
+                        pass
+                    st.session_state.page = "dashboard"
+                    st.rerun()
+                else:
+                    st.error("Please enter email.")
+        if st.button("Create Account instead"):
+            st.session_state.page = "signup"
+            st.rerun()
+
+elif st.session_state.logged_in:
+    top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
+    with top_col1:
+        st.markdown(f"👤 **{st.session_state.user_email}**")
+    with top_col2:
+        st.markdown(f"📱 **WhatsApp:** `{st.session_state.whatsapp_number}`")
+    with top_col3:
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.session_state.page = "landing"
+            st.rerun()
+
+    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 AI Sales Portal</h2>", unsafe_allow_html=True)
+
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "📊 Overview", "➕ Add & Edit", "📦 Live Products", "🧠 Train Bot", "🤖 AI Bot", "📢 Campaigns", "📱 Settings"
+    ])
+
+    with tab1:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Dashboard Overview")
+        try:
+            res = supabase.table("products").select("*").execute()
+            prods = res.data if res.data else []
+            st.metric("Total Products", len(prods))
+            st.metric("Total Stock", sum([p.get('stock', 0) for p in prods]))
+            st.success("Connected to Supabase & Groq successfully!")
+        except Exception as e:
+            st.error(f"Error: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab2:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Add New Product")
+        with st.form("add_prod_form", clear_on_submit=True):
+            p_name = st.text_input("Product Name")
+            p_price = st.number_input("Price ($)", min_value=0.0)
+            p_stock = st.number_input("Stock", min_value=0, step=1)
+            p_desc = st.text_area("Description & Features")
+            p_img = st.file_uploader("Product Image", type=['jpg', 'png'])
+            
+            if st.form_submit_button("Add Product"):
+                if p_name:
+                    try:
+                        img_name = p_img.name if p_img else "No image"
+                        supabase.table("products").insert({"name": p_name, "price": p_price, "stock": p_stock, "description": f"{p_desc} [Image: {img_name}]"}).execute()
+                        st.success("Added product successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                else:
+                    st.warning("Product name required.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Edit Inventory")
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                df = pd.DataFrame(resp.data)
+                edited = st.data_editor(df, key="editor", use_container_width=True)
+                if st.button("Save Edits"):
+                    for _, row in edited.iterrows():
+                        if 'id' in row and pd.notnull(row['id']):
+                            supabase.table("products").update({"name": row.get("name"), "price": row
