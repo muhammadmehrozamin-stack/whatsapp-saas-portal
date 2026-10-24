@@ -52,15 +52,16 @@ if "gemini_api_key" not in st.session_state:
 if "bot_custom_rule" not in st.session_state:
     st.session_state.bot_custom_rule = "You are an elite AI sales closer. Answer any query in any language, reference inventory, and close sales."
 
-def call_gemini_api(prompt, inventory_context, rules, api_key):
+def call_gemini_api(prompt, inventory_context, training_context, rules, api_key):
     key_to_use = api_key or default_api_key
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the Settings tab!"
     
     try:
         genai.configure(api_key=key_to_use)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        system_instruction = rules + "\nINVENTORY:\n" + inventory_context
+        # Using gemini-pro which is universally supported across all API key tiers without 404 errors
+        model = genai.GenerativeModel('gemini-pro')
+        system_instruction = f"{rules}\n\nMANUAL TRAINING / FAQ:\n{training_context}\n\nINVENTORY:\n{inventory_context}"
         full_prompt = f"{system_instruction}\n\nCustomer Message: {prompt}"
         response = model.generate_content(full_prompt)
         return response.text
@@ -186,8 +187,8 @@ elif st.session_state.logged_in:
 
     st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Gemini Sales Portal</h2>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📊 Overview", "➕ Add & Edit", "📦 Live Products", "🤖 Gemini Bot", "📢 Campaigns", "📱 Settings"
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "📊 Overview", "➕ Add & Edit", "📦 Live Products", "🧠 Train Bot", "🤖 Gemini Bot", "📢 Campaigns", "📱 Settings"
     ])
 
     with tab1:
@@ -257,8 +258,39 @@ elif st.session_state.logged_in:
 
     with tab4:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("🧠 Train Bot & Custom Q&A")
+        st.write("Add manual answers so your bot always answers specific questions exactly how you want.")
+        
+        with st.form("train_form", clear_on_submit=True):
+            t_question = st.text_input("Customer Question / Keyword")
+            t_answer = st.text_area("Exact Answer Bot Should Give")
+            if st.form_submit_button("Save Training Rule"):
+                if t_question and t_answer:
+                    try:
+                        supabase.table("training_faqs").insert({"question": t_question, "answer": t_answer}).execute()
+                        st.success("Training rule saved successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error saving rule: {e}")
+                else:
+                    st.warning("Please fill in both question and answer.")
+        
+        st.markdown("---")
+        st.subheader("Saved Training Rules")
+        try:
+            train_resp = supabase.table("training_faqs").select("*").execute()
+            if train_resp.data:
+                st.dataframe(pd.DataFrame(train_resp.data), use_container_width=True)
+            else:
+                st.info("No custom training rules added yet.")
+        except Exception as e:
+            st.info("Training table will populate once rules are added.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tab5:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.subheader("🤖 Gemini AI Sales Bot")
-        st.write("Ask any question. The bot references inventory and includes voice playback!")
+        st.write("Ask any question. The bot references live inventory and your manual training rules!")
         
         if "chat" not in st.session_state:
             st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
@@ -279,10 +311,22 @@ elif st.session_state.logged_in:
             if st.button("Send to Gemini"):
                 if user_q:
                     st.session_state.chat.append({"role": "user", "content": user_q})
+                    
+                    # Fetch inventory
                     res = supabase.table("products").select("*").execute()
                     items = res.data if res.data else []
                     inventory_str = json.dumps(items)
-                    reply = call_gemini_api(user_q, inventory_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
+                    
+                    # Fetch training FAQs
+                    training_str = ""
+                    try:
+                        t_res = supabase.table("training_faqs").select("*").execute()
+                        if t_res.data:
+                            training_str = json.dumps(t_res.data)
+                    except Exception:
+                        pass
+                    
+                    reply = call_gemini_api(user_q, inventory_str, training_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
                     st.session_state.chat.append({"role": "assistant", "content": reply})
                     st.rerun()
         with c_clear:
@@ -291,7 +335,7 @@ elif st.session_state.logged_in:
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab5:
+    with tab6:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.subheader("WhatsApp Campaigns")
         c_name = st.text_input("Campaign Title")
@@ -303,7 +347,7 @@ elif st.session_state.logged_in:
                 st.warning("Fill in all fields.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab6:
+    with tab7:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.subheader("Settings & Configuration")
         
