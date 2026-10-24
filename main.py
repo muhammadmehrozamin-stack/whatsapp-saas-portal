@@ -55,12 +55,12 @@ if "bot_custom_rule" not in st.session_state:
 def call_gemini_api(prompt, inventory_context, training_context, rules, api_key):
     key_to_use = api_key or default_api_key
     if not key_to_use:
-        return "⚠️ Please enter your Google Gemini API Key / Token in the Settings tab!"
+        return "⚠️ Please enter your API Key / Token in the Settings tab!"
     
     try:
-        # Configure supporting both standard AIza keys and AQ OAuth tokens
+        # Properly configure the Google Generative AI SDK for Cloud OAuth tokens (AQ...)
         if key_to_use.startswith("AQ."):
-            genai.configure(client_options={"api_key": key_to_use})
+            genai.configure(client_options={"api_key": key_to_use}, transport="rest")
         else:
             genai.configure(api_key=key_to_use)
             
