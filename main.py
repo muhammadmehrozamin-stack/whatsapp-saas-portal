@@ -41,10 +41,10 @@ st.markdown('''
         line-height: 1.5;
     }
 
-    .stTextInput > div > div > input, .stPasswordInput > div > div > input, .stTextArea > div > div > textarea {
+    .stTextInput > div > div > input, .stPasswordInput > div > div > input {
         background-color: #141a14 !important;
         color: #ffffff !important;
-        border-radius: 20px !important;
+        border-radius: 30px !important;
         border: 1px solid #283328 !important;
         padding: 14px 20px !important;
     }
@@ -90,7 +90,7 @@ st.markdown('''
 # Initialize Supabase Client
 # ---------------------------------------------------------
 SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
+SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
 
 @st.cache_resource
 def init_supabase():
@@ -136,7 +136,7 @@ if st.session_state.page == 'landing' and not st.session_state.logged_in:
                 st.rerun()
 
 # ---------------------------------------------------------
-# View 2: Sign Up Modal Card (Includes WhatsApp Number)
+# View 2: Sign Up Modal Card
 # ---------------------------------------------------------
 elif st.session_state.page == 'signup' and not st.session_state.logged_in:
     st.markdown('''
@@ -155,23 +155,18 @@ elif st.session_state.page == 'signup' and not st.session_state.logged_in:
     with c2:
         with st.form('signup_form'):
             email = st.text_input('Email', placeholder='Enter your email')
-            whatsapp = st.text_input('WhatsApp Number', placeholder='Enter WhatsApp (e.g., +923001234567)')
             password = st.text_input('Password', type='password', placeholder='Choose password')
             agree = st.checkbox('I agree to Privacy Policy')
             submit_signup = st.form_submit_button('Create Account')
 
             if submit_signup:
-                if not email or not whatsapp or not password:
-                    st.error('Please fill in all fields including your WhatsApp number.')
+                if not email or not password:
+                    st.error('Please fill in all fields.')
                 elif not agree:
                     st.warning('You must agree to the Privacy Policy.')
                 else:
                     try:
-                        supabase.table('users').insert({
-                            'email': email, 
-                            'whatsapp': whatsapp, 
-                            'password': password
-                        }).execute()
+                        supabase.table('users').insert({'email': email, 'password': password}).execute()
                         st.success('🎉 Account created successfully! Please Login Now.')
                         st.session_state.page = 'login'
                         st.rerun()
@@ -194,8 +189,8 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
             </svg>
         </div>
         <div class="neon-card">
-            <div class="neon-title">Welcome Back</div>
-            <div class="neon-subtitle">Login to access your WhatsApp portal.</div>
+            <div class="neon-title">Welcome to Website</div>
+            <div class="neon-subtitle">Sign in to Website</div>
         </div>
     ''', unsafe_allow_html=True)
 
@@ -204,6 +199,7 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
         with st.form('login_form'):
             email = st.text_input('Email', placeholder='Enter your email')
             password = st.text_input('Password', type='password', placeholder='Enter your password')
+            st.markdown("<p style='font-size:13px; color:#a0a0a0;'>I agree to <span style='color:#ccff00;'>Privacy Policy</span></p>", unsafe_allow_html=True)
             submit_login = st.form_submit_button('Login')
 
             if submit_login:
@@ -211,112 +207,147 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
                     st.error('Please fill in all fields.')
                 else:
                     try:
-                        response = supabase.table('users').select('*').eq('email', email).eq('password', password).execute()
-                        if response.data:
+                        res = supabase.table('users').select('*').eq('email', email).eq('password', password).execute()
+                        if res.data and len(res.data) > 0:
                             st.session_state.logged_in = True
                             st.session_state.user_email = email
                             st.session_state.page = 'dashboard'
-                            st.success('🎉 Login successful!')
                             st.rerun()
                         else:
-                            st.error('Invalid email or password.')
+                            st.error('Invalid Email or Password.')
                     except Exception as e:
                         st.error(f'Login error: {e}')
 
-        st.markdown("<p style='text-align:center; font-size:14px; margin-top:15px;'>Don't have an account?</p>", unsafe_allow_html=True)
-        if st.button('Sign up now'):
-            st.session_state.page = 'signup'
-            st.rerun()
+        st.markdown("<p style='text-align:center; font-size:14px; margin-top:10px; color:#ccff00;'>Forgot password?</p>", unsafe_allow_html=True)
+        
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button('⬅ Back'):
+                st.session_state.page = 'landing'
+                st.rerun()
+        with b2:
+            if st.button('Create Account'):
+                st.session_state.page = 'signup'
+                st.rerun()
 
 # ---------------------------------------------------------
-# View 4: Dashboard (Logged In Area)
+# View 4: Dashboard (3 Tabs: Add Product, Live Inventory, AI Assistant)
 # ---------------------------------------------------------
 elif st.session_state.logged_in:
-    st.sidebar.title("🟢 WhatsApp SaaS Portal")
-    st.sidebar.write(f"Logged in as: **{st.session_state.user_email}**")
-    
-    nav = st.sidebar.radio("Navigation", ["Dashboard Overview", "Inventory Manager", "Add Product", "WhatsApp Campaigns"])
-    
-    if st.sidebar.button("Logout"):
+    st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
+    if st.sidebar.button('Logout'):
         st.session_state.logged_in = False
-        st.session_state.user_email = ''
         st.session_state.page = 'landing'
         st.rerun()
 
-    if nav == "Dashboard Overview":
-        st.markdown("<h1 style='color: #ccff00;'>Dashboard Overview</h1>", unsafe_allow_html=True)
-        st.write(f"Welcome back, {st.session_state.user_email}! Manage your automated WhatsApp store and inventory effortlessly.")
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Active WhatsApp Bot", "Standby", "Ready")
-        col2.metric("Total Orders Today", "0", "No orders yet")
-        col3.metric("Inventory Items", "0", "Not synced")
-        
-    elif nav == "Inventory Manager":
-        st.markdown("<h1 style='color: #ccff00;'>Live Inventory Manager</h1>", unsafe_allow_html=True)
-        st.write("Manage items synced with your WhatsApp store catalog.")
-        
-        @st.cache_data(ttl=30)
-        def get_inventory():
-            res = supabase.table('products').select('*').execute()
-            return res.data
+    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Product Management Portal</h2>", unsafe_allow_html=True)
+    st.write("")
 
-        try:
-            data = get_inventory()
-            if data:
-                inventory_data = pd.DataFrame(data)
-                st.dataframe(inventory_data, use_container_width=True)
-            else:
-                st.info("No products found in your inventory yet. Use 'Add Product' to add some!")
-        except Exception as e:
-            st.warning("Could not load inventory table from Supabase yet. Make sure your 'products' table is created.")
+    tab1, tab2, tab3 = st.tabs(['➕ Add Product', '📦 Live Inventory', '🤖 AI WhatsApp Bot'])
+
+    # Tab 1: Add Product Form
+    with tab1:
+        st.markdown("<div class='neon-card' style='max-width:700px;'>", unsafe_allow_html=True)
+        st.subheader('Add a New Product')
+        with st.form('add_product_form', clear_on_submit=True):
+            p_name = st.text_input('Product Name')
+            p_price = st.number_input('Price ($)', min_value=0.0, step=1.0)
+            p_stock = st.number_input('Stock Quantity', min_value=0, step=1)
+            p_desc = st.text_area('Product Description')
             
-    elif nav == "Add Product":
-        st.markdown("<h1 style='color: #ccff00;'>Add New Product</h1>", unsafe_allow_html=True)
-        st.write("Add a new item to your WhatsApp store catalog.")
-        
-        with st.form("add_product_form"):
-            prod_name = st.text_input("Product Name", placeholder="e.g., Ps5")
-            prod_desc = st.text_area("Product Description", placeholder="Enter product details, features, or specs...")
-            
-            col_curr, col_price = st.columns([1, 2])
-            with col_curr:
-                currency = st.selectbox("Currency", ["USD ($)", "EUR (€)", "GBP (£)", "PKR (Rs)", "INR (₹)", "AED (د.إ)"])
-            with col_price:
-                prod_price = st.number_input("Price", min_value=0.0, format="%.2f")
-                
-            prod_stock = st.number_input("Stock Quantity", min_value=0, step=1)
-            submit_product = st.form_submit_button("Save Product")
-            
-            if submit_product:
-                if not prod_name:
-                    st.error("Please enter a product name.")
+            submit_prod = st.form_submit_button('Add Product to Store')
+
+            if submit_prod:
+                if not p_name:
+                    st.error('Product name is required.')
                 else:
                     try:
-                        curr_code = currency.split(" ")[0]
                         supabase.table('products').insert({
-                            "name": prod_name,
-                            "description": prod_desc,
-                            "price": prod_price,
-                            "currency": curr_code,
-                            "stock": prod_stock,
-                            "user_email": st.session_state.user_email
+                            'name': p_name,
+                            'price': p_price,
+                            'stock': p_stock,
+                            'description': p_desc
                         }).execute()
-                        
-                        # Clear cache so inventory updates instantly
-                        st.cache_data.clear()
-                        
-                        st.success(f"🎉 Product '{prod_name}' successfully added with price {curr_code} {prod_price}!")
+                        st.success(f"Successfully added '{p_name}' to inventory!")
                     except Exception as e:
-                        st.error(f"Error adding product: {e}")
-        
-    elif nav == "WhatsApp Campaigns":
-        st.markdown("<h1 style='color: #ccff00;'>WhatsApp Automated Campaigns</h1>", unsafe_allow_html=True)
-        st.write("Broadcast promotional messages or automated responses to customer segments.")
-        camp_name = st.text_input("Campaign Title")
-        camp_msg = st.text_area("Message Body")
-        if st.button("Launch Broadcast"):
-            if camp_name and camp_msg:
-                st.success(f"Campaign '{camp_name}' has been queued for broadcast!")
+                        st.error(f'Failed to add product: {e}')
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Tab 2: Live Products & Inline Editing
+    with tab2:
+        st.markdown("<div class='neon-card' style='max-width: 900px;'>", unsafe_allow_html=True)
+        st.subheader('Current Live Products')
+        try:
+            response = supabase.table('products').select('*').execute()
+            data = response.data
+
+            if data:
+                df = pd.DataFrame(data)
+                st.write("✏️ **Edit live values below and click 'Save Changes'**")
+                edited_df = st.data_editor(df, num_rows='dynamic', key='product_editor', use_container_width=True)
+
+                if st.button('💾 Save Changes to Supabase'):
+                    try:
+                        for idx, row in edited_df.iterrows():
+                            if 'id' in row and pd.notnull(row['id']):
+                                supabase.table('products').update({
+                                    'name': row.get('name'),
+                                    'price': row.get('price'),
+                                    'stock': row.get("stock"),
+                                    'description': row.get('description')
+                                }).eq('id', row['id']).execute()
+                        st.success('All product changes saved successfully!')
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f'Error saving updates: {e}')
             else:
-                st.warning("Please fill in both fields.")
+                st.info("No products found in live store. Add one in the 'Add Product' tab!")
+        except Exception as e:
+            st.error(f'Error loading products: {e}')
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Tab 3: AI WhatsApp Bot & Simulator
+    with tab3:
+        st.markdown("<div class='neon-card' style='max-width: 800px;'>", unsafe_allow_html=True)
+        st.subheader("🤖 WhatsApp AI Auto-Reply Simulator")
+        st.write("Test how your AI bot responds to customer queries based on your live Supabase inventory.")
+        
+        customer_query = st.text_input("Simulate Customer Message", placeholder="e.g., Hi, is the PS5 in stock and how much is it?")
+        
+        if st.button("Generate AI WhatsApp Reply"):
+            if not customer_query:
+                st.warning("Please enter a customer query.")
+            else:
+                try:
+                    # Fetch live products to ground the AI response
+                    res = supabase.table('products').select('*').execute()
+                    store_items = res.data
+                    
+                    # AI Response Logic matching inventory
+                    reply_text = "Hello! 👋 Thanks for reaching out to our WhatsApp store.\n\n"
+                    match_found = False
+                    
+                    query_lower = customer_query.lower()
+                    for item in store_items:
+                        if item['name'].lower() in query_lower or any(word in query_lower for word in item['name'].lower().split()):
+                            match_found = True
+                            reply_text += f"🟢 *{item['name']}* is currently **IN STOCK**!\n"
+                            reply_text += f"💰 Price: ${item['price']}\n"
+                            reply_text += f"📦 Available Units: {item['stock']}\n"
+                            reply_text += f"📝 Details: {item['description']}\n\n"
+                    
+                    if not match_found and store_items:
+                        reply_text += "Here is our current full catalog:\n"
+                        for item in store_items:
+                            if item['stock'] > 0:
+                                reply_text += f"- *{item['name']}*: ${item['price']} ({item['stock']} in stock)\n"
+                    elif not store_items:
+                        reply_text += "Our store catalog is currently empty. Please check back soon!"
+                        
+                    reply_text += "\n📲 Reply 'ORDER [Product Name]' to secure yours instantly!"
+                    
+                    st.success("Generated WhatsApp Auto-Reply:")
+                    st.code(reply_text, language="markdown")
+                except Exception as e:
+                    st.error(f"Error generating AI response: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
