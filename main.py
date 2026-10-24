@@ -55,12 +55,16 @@ if "bot_custom_rule" not in st.session_state:
 def call_gemini_api(prompt, inventory_context, training_context, rules, api_key):
     key_to_use = api_key or default_api_key
     if not key_to_use:
-        return "⚠️ Please enter your Google Gemini API Key in the Settings tab!"
+        return "⚠️ Please enter your Google Gemini API Key / Token in the Settings tab!"
     
     try:
-        genai.configure(api_key=key_to_use)
-        # Using gemini-2.5-flash which is the current required SDK model alias
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Configure supporting both standard AIza keys and AQ OAuth tokens
+        if key_to_use.startswith("AQ."):
+            genai.configure(client_options={"api_key": key_to_use})
+        else:
+            genai.configure(api_key=key_to_use)
+            
+        model = genai.GenerativeModel('gemini-1.5-flash')
         system_instruction = f"{rules}\n\nMANUAL TRAINING / FAQ:\n{training_context}\n\nINVENTORY:\n{inventory_context}"
         full_prompt = f"{system_instruction}\n\nCustomer Message: {prompt}"
         response = model.generate_content(full_prompt)
@@ -351,7 +355,7 @@ elif st.session_state.logged_in:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.subheader("Settings & Configuration")
         
-        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste Gemini API key...")
+        gemini_key_input = st.text_input("Google Gemini API Key / Token", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your API key or token here...")
         new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
         
         st.markdown("---")
