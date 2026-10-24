@@ -102,14 +102,14 @@ if "bot_custom_rule" not in st.session_state:
     )
 
 # ---------------------------------------------------------
-# Gemini API Integration Function
+# Gemini API Integration Function (Updated to gemini-2.0-flash)
 # ---------------------------------------------------------
 def call_gemini_api(prompt, inventory_context, rules, api_key):
     key_to_use = api_key or default_api_key
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets to activate full Gemini intelligence!"
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_to_use}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key_to_use}"
     
     system_instruction = f"""
     {rules}
