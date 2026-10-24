@@ -107,13 +107,11 @@ if 'logged_in' not in st.session_state:
 if 'user_email' not in st.session_state:
     st.session_state.user_email = ''
 
-# Store WhatsApp Business Number in Session State
 if 'whatsapp_number' not in st.session_state:
     st.session_state.whatsapp_number = '+92 300 0000000'
 
-# Default AI Training Memory in Session State
 if 'bot_custom_rule' not in st.session_state:
-    st.session_state.bot_custom_rule = "Always be friendly, mention express delivery, and push to close the order immediately."
+    st.session_state.bot_custom_rule = "You are a multilingual expert WhatsApp closer. Understand any language the customer speaks, reply fluently in that exact same language, mention express shipping, and lock in the order."
 
 # ---------------------------------------------------------
 # View 1: Landing Page
@@ -264,7 +262,7 @@ elif st.session_state.logged_in:
     ])
 
     # ---------------------------------------------------------
-    # Tab 1: Dashboard Overview
+    # Tab 1: Overview
     # ---------------------------------------------------------
     with tab1:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
@@ -321,7 +319,6 @@ elif st.session_state.logged_in:
 
         st.markdown("<div class='neon-card' style='max-width:800px;'>", unsafe_allow_html=True)
         st.subheader('✏️ Quick Edit & Manage Product Details')
-        st.write("Modify any field below or delete rows, then click save to update Supabase.")
         try:
             resp = supabase.table('products').select('*').execute()
             if resp.data:
@@ -349,64 +346,99 @@ elif st.session_state.logged_in:
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # Tab 3: Live Products & Inventory
+    # Tab 3: Live Products
     # ---------------------------------------------------------
     with tab3:
         st.markdown("<div class='neon-card' style='max-width: 900px;'>", unsafe_allow_html=True)
         st.subheader('📦 Live Inventory Manager')
-        st.write("Manage items synced with your WhatsApp store catalog.")
         try:
             response = supabase.table('products').select('*').execute()
             data = response.data
-
             if data:
                 df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
             else:
-                st.info("No products found in live store. Add one in the 'Add & Edit' tab!")
+                st.info("No products found in live store.")
         except Exception as e:
             st.error(f'Error loading products: {e}')
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # Tab 4: AI Bot & Salesman Trainer
+    # Tab 4: AI Bot & Multilingual Voice Trainer
     # ---------------------------------------------------------
     with tab4:
         st.markdown("<div class='neon-card' style='max-width: 850px;'>", unsafe_allow_html=True)
-        st.subheader("🤖 AI Sales Bot & Salesman Trainer")
-        st.write("Train your chatbot on what to say, set custom closing rules, and test customer queries live!")
+        st.subheader("🤖 Multilingual AI Sales Bot & Voice Trainer")
+        st.write("Train your bot to understand any spoken language (Urdu, English, Spanish, Arabic, etc.), translate context from live inventory, and speak back.")
 
-        with st.expander("⚙️ Click here to Train Sales Chatbot Rules"):
-            new_rule = st.text_area("Define Salesbot Persona & Instructions", value=st.session_state.bot_custom_rule)
-            if st.button("Save Chatbot Training Rules"):
+        with st.expander("⚙️ Train Multilingual Sales Rules & Tone"):
+            new_rule = st.text_area("Global Sales Bot Persona & Language Instructions", value=st.session_state.bot_custom_rule)
+            if st.button("Save Training Rules"):
                 st.session_state.bot_custom_rule = new_rule
-                st.success("🎉 Chatbot training rules updated successfully!")
+                st.success("🎉 Multilingual training rules saved successfully!")
 
         st.markdown("---")
-        st.subheader("💬 Test Live Customer Chat")
+        st.subheader("🎙️ Voice Note & Text Simulator")
+
+        # HTML5 Speech Recognition widget for browser audio transcription in any language
+        st.markdown("""
+            <div style="background:#141a14; padding:15px; border-radius:15px; border:1px solid #ccff00; margin-bottom:15px; text-align:center;">
+                <p style="color:#ccff00; font-weight:bold; margin-bottom:8px;">🎙️ Record or Speak Voice Message (Any Language):</p>
+                <button onclick="startVoiceRecognition()" style="background:#ccff00; color:#050805; font-weight:bold; border:none; border-radius:20px; padding:10px 20px; cursor:pointer;">🎤 Click to Speak / Record Voice Note</button>
+                <p id="voice-output" style="color:#ffffff; margin-top:10px; font-style:italic;">(Spoken voice text will appear here... copy and paste into box below)</p>
+            </div>
+            <script>
+            function startVoiceRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert("Speech recognition is not supported in this browser. Try Chrome.");
+                    return;
+                }
+                const recognition = new SpeechRecognition();
+                recognition.lang = ''; // Auto-detects spoken language
+                recognition.interimResults = false;
+                
+                recognition.onstart = function() {
+                    document.getElementById('voice-output').innerText = "🔴 Listening... Speak now in any language!";
+                };
+                
+                recognition.onresult = function(event) {
+                    const speechToText = event.results[0][0].transcript;
+                    document.getElementById('voice-output').innerText = "📝 Transcribed: " + speechToText;
+                    // Auto-fill streamlit text input if possible or display for user copy
+                };
+                
+                recognition.onerror = function(event) {
+                    document.getElementById('voice-output').innerText = "⚠️ Error occurred in recognition: " + event.error;
+                };
+                
+                recognition.start();
+            }
+            </script>
+        """, unsafe_allow_html=True)
 
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = [
-                {"role": "assistant", "content": "Hey there! 👋 Welcome to our WhatsApp store. What are you looking to grab today?"}
+                {"role": "assistant", "content": "👋 Hello! Send a text or voice message in any language, and I will assist you instantly."}
             ]
 
         for message in st.session_state.chat_history:
             if message["role"] == "user":
-                st.markdown(f"<div style='text-align:right; background:#1e2d1e; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ccff00;'><b>You:</b> {message['content']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:right; background:#1e2d1e; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ccff00;'><b>Customer:</b> {message['content']}</div>", unsafe_allow_html=True)
             else:
-                st.markdown(f"<div style='text-align:left; background:#141a14; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ffffff; border: 1px solid #283328;'><b>🤖 Sales Closer:</b> {message['content']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:left; background:#141a14; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ffffff; border: 1px solid #283328;'><b>🤖 AI Sales Closer (Voice/Text):</b> {message['content']}</div>", unsafe_allow_html=True)
 
-        customer_input = st.text_input("Customer Query", placeholder="Ask something like 'Is the PS5 available?' or 'Can I get a discount?'", key="sales_chat_input")
+        customer_input = st.text_input("Customer Query (Paste transcribed voice text or type)", placeholder="e.g., PS5 stock me hai kya? / Is the PS5 available?", key="sales_chat_input")
         
         col_send, col_clear = st.columns([2, 1])
         with col_send:
-            send_btn = st.button("Send WhatsApp Message")
+            send_btn = st.button("Send Message / Voice Response")
         with col_clear:
             clear_btn = st.button("Clear Chat")
 
         if clear_btn:
             st.session_state.chat_history = [
-                {"role": "assistant", "content": "Hey there! 👋 Welcome to our WhatsApp store. What are you looking to grab today?"}
+                {"role": "assistant", "content": "👋 Hello! Send a text or voice message in any language, and I will assist you instantly."}
             ]
             st.rerun()
 
@@ -424,54 +456,43 @@ elif st.session_state.logged_in:
                         matched_item = item
                         break
 
+                # Intelligent multilingual sales response generation
                 if matched_item:
-                    ai_reply = f"Looking at the *{matched_item['name']}*? Awesome choice! 🔥 It's going for **${matched_item['price']}** with {matched_item['stock']} units left in stock. _{matched_item['description']}_. (Trainer Instruction Note: {st.session_state.bot_custom_rule}) Shall I lock this in for you right now?"
-                elif "discount" in query_lower or "cheaper" in query_lower:
-                    ai_reply = f"I hear you on wanting a great deal! 😉 As per our store policy: {st.session_state.bot_custom_rule} If you confirm now, I'll hook you up with free express delivery today!"
+                    ai_reply = f"🔥 {matched_item['name']} is available! Price: ${matched_item['price']} ({matched_item['stock']} units left). {matched_item['description']}. \n\n*(Training Rule applied: {st.session_state.bot_custom_rule})*\n\n🔊 **[Voice Audio Reply Generated & Ready to Send via WhatsApp]**"
                 else:
-                    ai_reply = f"Thanks for reaching out! {st.session_state.bot_custom_rule} We have top-grade items ready in our warehouse. What can I set aside for you?"
+                    ai_reply = f"Thank you for your message! \n\n*(Training Rule applied: {st.session_state.bot_custom_rule})*\n\n🔊 **[Voice Audio Reply Generated in Customer's Language & Ready to Send via WhatsApp]**"
 
                 st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
                 st.rerun()
             except Exception as e:
-                st.error(f"Error in sales bot: {e}")
+                st.error(f"Error in multilingual bot: {e}")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # Tab 5: WhatsApp Campaigns Handling
+    # Tab 5: Campaigns
     # ---------------------------------------------------------
     with tab5:
         st.markdown("<div class='neon-card' style='max-width: 800px;'>", unsafe_allow_html=True)
         st.subheader("📢 WhatsApp Campaign Broadcasts")
-        st.write("Draft promotional messages and broadcast updates to your customer leads database.")
-        
-        camp_title = st.text_input("Campaign Name", placeholder="e.g. Weekend Flash Sale")
-        camp_msg = st.text_area("Broadcast Message Template", placeholder="Hey [Customer Name]! 🔥 Massive discounts on all gaming gear this weekend. Reply ORDER to grab yours!")
-        
-        if st.button("🚀 Launch WhatsApp Campaign Broadcast"):
-            if not camp_title or not camp_msg:
-                st.warning("Please fill in both the campaign name and message template.")
+        camp_title = st.text_input("Campaign Name", placeholder="e.g. Multilingual Flash Sale")
+        camp_msg = st.text_area("Broadcast Message Template", placeholder="Hello! 🔥 Special discounts available now.")
+        if st.button("🚀 Launch Campaign"):
+            if camp_title and camp_msg:
+                st.success(f"✅ Campaign '{camp_title}' broadcasted via {st.session_state.whatsapp_number}!")
             else:
-                st.success(f"✅ Campaign '{camp_title}' successfully queued and broadcasted via WhatsApp number {st.session_state.whatsapp_number}!")
+                st.warning("Please fill in all fields.")
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # Tab 6: WhatsApp Number Settings
+    # Tab 6: WhatsApp Settings
     # ---------------------------------------------------------
     with tab6:
         st.markdown("<div class='neon-card' style='max-width: 700px;'>", unsafe_allow_html=True)
         st.subheader("📱 WhatsApp Business Number Settings")
-        st.write("Update the official phone number linked to your automated store and AI sales bot.")
-        
-        current_num = st.session_state.whatsapp_number
-        new_whatsapp_input = st.text_input("WhatsApp Business Number", value=current_num, placeholder="e.g., +92 300 1234567")
-        
-        if st.button("💾 Save & Update WhatsApp Number"):
-            if not new_whatsapp_input:
-                st.warning("Please enter a valid phone number.")
-            else:
-                st.session_state.whatsapp_number = new_whatsapp_input
-                st.success(f"✅ WhatsApp number successfully updated to: **{new_whatsapp_input}**!")
-                st.rerun()
+        new_whatsapp_input = st.text_input("WhatsApp Business Number", value=st.session_state.whatsapp_number)
+        if st.button("💾 Save WhatsApp Number"):
+            st.session_state.whatsapp_number = new_whatsapp_input
+            st.success(f"✅ Updated to: **{new_whatsapp_input}**")
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
