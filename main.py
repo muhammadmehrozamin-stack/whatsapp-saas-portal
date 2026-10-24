@@ -61,7 +61,7 @@ def call_gemini_api(prompt, inventory_context, rules, api_key):
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets!"
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key_to_use}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_to_use}"
     system_instruction = rules + "\nINVENTORY:\n" + inventory_context
     payload = {"contents": [{"parts": [{"text": system_instruction}, {"text": prompt}]}]}
     
@@ -347,15 +347,4 @@ elif st.session_state.logged_in:
                 if entered_set_otp == st.session_state.settings_otp_code:
                     st.session_state.whatsapp_number = st.session_state.pending_whatsapp
                     st.session_state.settings_otp_step = False
-                    st.success("WhatsApp number verified and updated successfully!")
-                    st.rerun()
-                else:
-                    st.error("Invalid OTP code.")
-        
-        st.markdown("---")
-        if st.button("Save Settings"):
-            st.session_state.gemini_api_key = gemini_key_input
-            st.session_state.bot_custom_rule = new_rule
-            st.success("Settings saved successfully!")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+                    st.success("WhatsApp number
