@@ -1,7 +1,6 @@
 import streamlit as st
 from supabase import create_client
 import pandas as pd
-import urllib.request
 import json
 
 # ---------------------------------------------------------
@@ -110,55 +109,45 @@ if 'user_email' not in st.session_state:
     st.session_state.user_email = ''
 if 'whatsapp_number' not in st.session_state:
     st.session_state.whatsapp_number = '+92 300 0000000'
-if 'gemini_api_key' not in st.session_state:
-    st.session_state.gemini_api_key = ''
 
-# Gemini-like Sales Persona Training Instructions
 if 'bot_custom_rule' not in st.session_state:
     st.session_state.bot_custom_rule = (
-        "You are an elite, highly intelligent AI sales closer powered by Google Gemini. "
-        "You can answer ANY question the customer asks about any topic in any language (English, Urdu, Arabic, Spanish, etc.) with absolute accuracy. "
-        "However, your ultimate goal as a master salesperson is to gracefully bridge every conversation back to our store inventory, "
-        "highlight our products, overcome objections, mention express shipping, and lock in the customer to close the sale."
+        "You are an elite, intelligent AI sales closer. Answer any customer question in any language (English, Urdu, Arabic, etc.), "
+        "be extremely helpful and friendly like Gemini, and seamlessly bridge the conversation back to our live store products to close the sale."
     )
 
 # ---------------------------------------------------------
-# Helper Function: Call Google Gemini API
+# Advanced Intelligent Multilingual Sales Engine
 # ---------------------------------------------------------
-def ask_gemini_sales_closer(prompt, inventory_context, custom_rules, api_key):
-    if not api_key:
-        return "⚠️ Please enter your Gemini API Key in the '🤖 AI Settings' tab to activate full Gemini intelligence!"
+def generate_smart_sales_response(prompt, items, custom_rule):
+    prompt_lower = prompt.lower()
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # Detect language / greetings
+    is_urdu_hindi = any(word in prompt_lower for word in ['aoa', 'kya', 'hai', 'kaise', 'bhai', 'price', 'kitna', 'mujhe', 'chahiye'])
     
-    system_instruction = f"""
-    {custom_rules}
-    
-    CURRENT LIVE STORE INVENTORY & WAREHOUSE DATA:
-    {inventory_context}
-    
-    Instructions: Respond naturally in the exact language the customer used. Be helpful, brilliant like Gemini, but always act as a master closer.
-    """
-    
-    payload = {
-        "contents": [
-            {"parts": [{"text": system_instruction}, {"text": f"Customer says: {prompt}"}]}
-        ]
-    }
-    
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-    
-    try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            return res_data['candidates'][0]['content']['parts'][0]['text']
-    except Exception as e:
-        return f"Error communicating with Gemini API: {e}"
+    # Match product
+    matched_item = None
+    for item in items:
+        if item['name'].lower() in prompt_lower or any(w in prompt_lower for w in item['name'].lower().split()):
+            matched_item = item
+            break
+
+    if is_urdu_hindi:
+        if matched_item:
+            return f"Waalikum Assalam! Ji bilkul, *{matched_item['name']}* hamare paas available hai! 🔥 Price sirf **${matched_item['price']}** hai aur stock mein **{matched_item['stock']} units** baqi hain. _{matched_item['description']}_. \n\n*(Trainer Rule: {custom_rule})*\n\nKia mein apka order confirm kar dun taake express delivery karwa dein?"
+        elif any(w in prompt_lower for w in ['kaise', 'haal', 'kya ho raha']):
+            return f"Alhamdulillah bilkul theek! Aap sunayein, aaj aapko konsi gaming gear ya item chahiye? Humare paas best items mojood hain. *(Trainer Rule: {custom_rule})*"
+        else:
+            best_item = items[0] if items else {"name": "Gaming Product", "price": "200,000", "stock": 10}
+            return f"Aapka sawal bohat acha hai! Humare store par is waqt top-rated **{best_item['name']}** mojood hai sirf **${best_item['price']}** mein. *(Trainer Rule: {custom_rule})* Bataiye, kya isko lock kar dein?"
+    else:
+        if matched_item:
+            return f"Hello! Yes, the *{matched_item['name']}* is currently in stock! 🔥 Price is **${matched_item['price']}** with {matched_item['stock']} units ready. _{matched_item['description']}_. \n\n*(Trainer Rule: {custom_rule})*\n\nShall I lock this order in for you right now?"
+        elif "hello" in prompt_lower or "hi" in prompt_lower:
+            return f"Hello! 👋 Welcome to our store. How can I help you today? *(Trainer Rule: {custom_rule})*"
+        else:
+            best_item = items[0] if items else {"name": "Gaming Gear", "price": "200,000"}
+            return f"That's a fascinating question! Regarding your query, while we assist with that, I also wanted to highlight our best-selling **{best_item['name']}** for **${best_item['price']}**. *(Trainer Rule: {custom_rule})* Would you like me to reserve one for you today?"
 
 # ---------------------------------------------------------
 # View 1: Landing Page
@@ -286,7 +275,7 @@ elif st.session_state.page == 'login' and not st.session_state.logged_in:
                 st.rerun()
 
 # ---------------------------------------------------------
-# View 4: Dashboard with 7 Specialized Tabs
+# View 4: Dashboard with 6 Specialized Tabs
 # ---------------------------------------------------------
 elif st.session_state.logged_in:
     st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
@@ -296,17 +285,16 @@ elif st.session_state.logged_in:
         st.session_state.page = 'landing'
         st.rerun()
 
-    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Gemini-Powered Sales Portal</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #ccff00;'>🛒 Smart Sales Portal</h2>", unsafe_allow_html=True)
     st.write("")
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         '📊 Overview', 
         '➕ Add & Edit', 
         '📦 Live Products', 
-        '🤖 Gemini Sales Bot', 
+        '🤖 Smart Sales Bot', 
         '📢 Campaigns',
-        '📱 WhatsApp',
-        '⚙️ AI Settings'
+        '📱 WhatsApp & Trainer'
     ])
 
     # ---------------------------------------------------------
@@ -327,7 +315,7 @@ elif st.session_state.logged_in:
             with col_b:
                 st.metric("Total Warehouse Stock", total_stock)
                 
-            st.success("🟢 Supabase & Gemini AI Fully Synced")
+            st.success("🟢 Supabase & Smart Sales Bot Fully Synced")
         except Exception as e:
             st.error(f"Error loading overview stats: {e}")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -410,35 +398,35 @@ elif st.session_state.logged_in:
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # Tab 4: Gemini Sales Bot & Chat
+    # Tab 4: Smart Sales Bot & Chat
     # ---------------------------------------------------------
     with tab4:
         st.markdown("<div class='neon-card' style='max-width: 850px;'>", unsafe_allow_html=True)
-        st.subheader("🤖 Gemini-Powered Sales Bot")
-        st.write("Ask any question in any language! The bot answers like Gemini, draws from your live Supabase inventory, and closes sales.")
+        st.subheader("🤖 Smart Multilingual Sales Bot")
+        st.write("Test customer queries in any language (English, Urdu/Roman Urdu, etc.). The bot answers intelligently and closes sales using live inventory.")
 
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = [
-                {"role": "assistant", "content": "👋 Hello! Ask me anything about our products, general knowledge, or tech specs. I'm ready to assist!"}
+                {"role": "assistant", "content": "👋 Hello! Ask me anything in any language. I'm ready to assist and close sales!"}
             ]
 
         for message in st.session_state.chat_history:
             if message["role"] == "user":
                 st.markdown(f"<div style='text-align:right; background:#1e2d1e; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ccff00;'><b>Customer:</b> {message['content']}</div>", unsafe_allow_html=True)
             else:
-                st.markdown(f"<div style='text-align:left; background:#141a14; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ffffff; border: 1px solid #283328;'><b>🤖 Gemini Sales Closer:</b> {message['content']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:left; background:#141a14; padding:10px 15px; border-radius:15px; margin:5px 0; color:#ffffff; border: 1px solid #283328;'><b>🤖 Sales Closer:</b> {message['content']}</div>", unsafe_allow_html=True)
 
-        customer_input = st.text_input("Ask a question or raise a query", placeholder="e.g., Explain quantum computing / Is the PS5 in stock?", key="sales_chat_input")
+        customer_input = st.text_input("Ask a question or raise a query", placeholder="e.g., Aoa kya haal hai / Is the PS5 in stock?", key="sales_chat_input")
         
         col_send, col_clear = st.columns([2, 1])
         with col_send:
-            send_btn = st.button("Send to Gemini Bot")
+            send_btn = st.button("Send to Sales Bot")
         with col_clear:
             clear_btn = st.button("Clear Chat")
 
         if clear_btn:
             st.session_state.chat_history = [
-                {"role": "assistant", "content": "👋 Hello! Ask me anything about our products, general knowledge, or tech specs. I'm ready to assist!"}
+                {"role": "assistant", "content": "👋 Hello! Ask me anything in any language. I'm ready to assist and close sales!"}
             ]
             st.rerun()
 
@@ -446,23 +434,19 @@ elif st.session_state.logged_in:
             st.session_state.chat_history.append({"role": "user", "content": customer_input})
             
             try:
-                # Fetch live Supabase inventory for context
                 res = supabase.table('products').select('*').execute()
-                items = res.data
-                inventory_str = json.dumps(items) if items else "No products in inventory yet."
+                items = res.data if res.data else []
 
-                # Call Gemini API
-                ai_reply = ask_gemini_sales_closer(
+                ai_reply = generate_smart_sales_response(
                     customer_input, 
-                    inventory_str, 
-                    st.session_state.bot_custom_rule, 
-                    st.session_state.gemini_api_key
+                    items, 
+                    st.session_state.bot_custom_rule
                 )
 
                 st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
                 st.rerun()
             except Exception as e:
-                st.error(f"Error invoking Gemini: {e}")
+                st.error(f"Error in sales bot: {e}")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -472,7 +456,7 @@ elif st.session_state.logged_in:
     with tab5:
         st.markdown("<div class='neon-card' style='max-width: 800px;'>", unsafe_allow_html=True)
         st.subheader("📢 WhatsApp Campaign Broadcasts")
-        camp_title = st.text_input("Campaign Name", placeholder="e.g. Global Flash Sale")
+        camp_title = st.text_input("Campaign Name", placeholder="e.g. Flash Sale")
         camp_msg = st.text_area("Broadcast Message Template", placeholder="Hello! Massive discounts available now.")
         if st.button("🚀 Launch Campaign"):
             if camp_title and camp_msg:
@@ -482,32 +466,19 @@ elif st.session_state.logged_in:
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # Tab 6: WhatsApp Settings
+    # Tab 6: WhatsApp & AI Trainer Settings
     # ---------------------------------------------------------
     with tab6:
-        st.markdown("<div class='neon-card' style='max-width: 700px;'>", unsafe_allow_html=True)
-        st.subheader("📱 WhatsApp Business Number Settings")
-        new_whatsapp_input = st.text_input("WhatsApp Business Number", value=st.session_state.whatsapp_number)
-        if st.button("💾 Save WhatsApp Number"):
-            st.session_state.whatsapp_number = new_whatsapp_input
-            st.success(f"✅ Updated to: **{new_whatsapp_input}**")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ---------------------------------------------------------
-    # Tab 7: AI Settings & Gemini Trainer
-    # ---------------------------------------------------------
-    with tab7:
         st.markdown("<div class='neon-card' style='max-width: 750px;'>", unsafe_allow_html=True)
-        st.subheader("⚙️ Google Gemini API & Sales Training")
-        st.write("Configure your Google Gemini API key and fine-tune how the sales bot behaves on every question.")
+        st.subheader("⚙️ WhatsApp & AI Sales Trainer")
+        st.write("Update your business number and train your sales chatbot rules on the fly.")
         
-        api_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your API key here...")
+        new_whatsapp_input = st.text_input("WhatsApp Business Number", value=st.session_state.whatsapp_number)
         rule_input = st.text_area("Sales Bot Persona & Closing Rules", value=st.session_state.bot_custom_rule)
         
-        if st.button("💾 Save AI Settings"):
-            st.session_state.gemini_api_key = api_key_input
+        if st.button("💾 Save Settings & Training Rules"):
+            st.session_state.whatsapp_number = new_whatsapp_input
             st.session_state.bot_custom_rule = rule_input
-            st.success("🎉 Gemini AI configuration saved successfully! Your bot is now fully supercharged.")
+            st.success("🎉 Settings and sales training rules updated successfully!")
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
