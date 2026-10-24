@@ -66,6 +66,47 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Initialize Supabase Client
+# Initialize Supabase Client (Unbroken Strings)
 # ---------------------------------------------------------
-SUPABASE_URL = "
+SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
+SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
+
+@st.cache_resource
+def init_supabase():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+supabase = init_supabase()
+
+if "page" not in st.session_state:
+    st.session_state.page = "landing"
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user_email" not in st.session_state:
+    st.session_state.user_email = ""
+if "whatsapp_number" not in st.session_state:
+    st.session_state.whatsapp_number = "+92 300 0000000"
+if "signup_step" not in st.session_state:
+    st.session_state.signup_step = "form"
+if "settings_otp_step" not in st.session_state:
+    st.session_state.settings_otp_step = False
+
+try:
+    default_api_key = st.secrets.get("GEMINI_API_KEY", "")
+except Exception:
+    default_api_key = ""
+
+if "gemini_api_key" not in st.session_state:
+    st.session_state.gemini_api_key = default_api_key
+
+if "bot_custom_rule" not in st.session_state:
+    st.session_state.bot_custom_rule = "You are an elite AI sales closer. Answer any query in any language, reference inventory, and close sales."
+
+# ---------------------------------------------------------
+# Gemini API Integration Function
+# ---------------------------------------------------------
+def call_gemini_api(prompt, inventory_context, rules, api_key):
+    key_to_use = api_key or default_api_key
+    if not key_to_use:
+        return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets!"
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key_to_use}"
