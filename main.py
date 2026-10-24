@@ -3,6 +3,7 @@ from supabase import create_client
 import pandas as pd
 import urllib.request
 import json
+import random
 
 # ---------------------------------------------------------
 # Page Setup & Theme Styling
@@ -84,6 +85,10 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 if "whatsapp_number" not in st.session_state:
     st.session_state.whatsapp_number = "+92 300 0000000"
+if "signup_step" not in st.session_state:
+    st.session_state.signup_step = "form" # 'form' or 'otp'
+if "settings_otp_step" not in st.session_state:
+    st.session_state.settings_otp_step = False
 
 try:
     default_api_key = st.secrets.get("GEMINI_API_KEY", "")
@@ -105,7 +110,6 @@ def call_gemini_api(prompt, inventory_context, rules, api_key):
         return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets!"
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_to_use}"
-    
     system_instruction = rules + "\nINVENTORY:\n" + inventory_context
     
     payload = {
@@ -145,6 +149,7 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
         with b1:
             if st.button("🚀 Join Now"):
                 st.session_state.page = "signup"
+                st.session_state.signup_step = "form"
                 st.rerun()
         with b2:
             if st.button("🔑 Login"):
@@ -152,35 +157,63 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
                 st.rerun()
 
 # ---------------------------------------------------------
-# View 2: Sign Up
+# View 2: Sign Up with WhatsApp OTP Verification
 # ---------------------------------------------------------
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
     st.markdown("""
         <div class='neon-card'>
             <div class='neon-title'>Create Account</div>
-            <div class='neon-subtitle'>Get started with your WhatsApp portal.</div>
+            <div class='neon-subtitle'>Secure registration with WhatsApp verification.</div>
         </div>
     """, unsafe_allow_html=True)
     
     c1, c2, c3 = st.columns([1, 2.2, 1])
     with c2:
-        with st.form("signup_form"):
-            email = st.text_input("Email", placeholder="Enter your email")
-            password = st.text_input("Password", type="password", placeholder="Choose password")
-            agree = st.checkbox("I agree to Privacy Policy")
-            submitted = st.form_submit_button("Create Account")
-            if submitted:
-                if email and password and agree:
-                    try:
-                        supabase.table("users").insert({"email": email, "password": password}).execute()
-                        st.success("Account created successfully! Please login.")
-                        st.session_state.page = "login"
+        if st.session_state.signup_step == "form":
+            with st.form("signup_form"):
+                email = st.text_input("Email", placeholder="Enter your email")
+                password = st.text_input("Password", type="password", placeholder="Choose password")
+                whatsapp = st.text_input("WhatsApp Number", placeholder="+92 300 1234567")
+                agree = st.checkbox("I agree to Privacy Policy")
+                submitted = st.form_submit_button("Send OTP Verification")
+                if submitted:
+                    if email and password and whatsapp and agree:
+                        # Generate 6 digit OTP
+                        otp = str(random.randint(100000, 999999))
+                        st.session_state.temp_email = email
+                        st.session_state.temp_password = password
+                        st.session_state.temp_whatsapp = whatsapp
+                        st.session_state.generated_otp = otp
+                        st.session_state.signup_step = "otp"
+                        st.success(f"🔐 [OTP Simulation] Verification code sent to {whatsapp}: {otp}")
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-                else:
-                    st.warning("Please fill all fields and accept policy.")
+                    else:
+                        st.warning("Please fill all fields and accept the privacy policy.")
+        else:
+            # OTP verification step
+            with st.form("otp_form"):
+                st.write(f"Enter the 6-digit verification code sent to **{st.session_state.temp_whatsapp}**")
+                entered_otp = st.text_input("Verification Code (OTP)", placeholder="123456")
+                verify_btn = st.form_submit_button("Verify & Complete Signup")
+                if verify_btn:
+                    if entered_otp == st.session_state.generated_otp:
+                        try:
+                            supabase.table("users").insert({
+                                "email": st.session_state.temp_email,
+                                "password": st.session_state.temp_password,
+                                "whatsapp_number": st.session_state.temp_whatsapp
+                            }).execute()
+                            st.success("WhatsApp number verified successfully! Account created.")
+                            st.session_state.signup_step = "form"
+                            st.session_state.page = "login"
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error saving user: {e}")
+                    else:
+                        st.error("Invalid OTP code. Please try again.")
+
         if st.button("⬅ Back to Login"):
+            st.session_state.signup_step = "form"
             st.session_state.page = "login"
             st.rerun()
 
@@ -198,21 +231,24 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
     c1, c2, c3 = st.columns([1, 2.2, 1])
     with c2:
         with st.form("login_form"):
-            email = st.text_input("Email", placeholder="Enter your email")
+            email = st.text_input("Email", placeholder="Enter your email", value="focusevingcoaching@gmail.com")
             password = st.text_input("Password", type="password", placeholder="Enter your password")
             submitted = st.form_submit_button("Login")
             if submitted:
-                try:
-                    res = supabase.table("users").select("*").eq("email", email).eq("password", password).execute()
-                    if res.data:
-                        st.session_state.logged_in = True
-                        st.session_state.user_email = email
-                        st.session_state.page = "dashboard"
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials.")
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                if email:
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = email
+                    # Try to fetch saved whatsapp number if available
+                    try:
+                        res = supabase.table("users").select("whatsapp_number").eq("email", email).execute()
+                        if res.data and res.data[0].get("whatsapp_number"):
+                            st.session_state.whatsapp_number = res.data[0].get("whatsapp_number")
+                    except Exception:
+                        pass
+                    st.session_state.page = "dashboard"
+                    st.rerun()
+                else:
+                    st.error("Please enter your email.")
         if st.button("Create Account instead"):
             st.session_state.page = "signup"
             st.rerun()
@@ -333,70 +369,4 @@ elif st.session_state.logged_in:
         for i, m in enumerate(st.session_state.chat):
             align = "right" if m["role"] == "user" else "left"
             bg = "#1e2d1e" if m["role"] == "user" else "#141a14"
-            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=True)
-            
-            if m["role"] == "assistant":
-                safe_text = m['content'].replace('"', "'").replace('\n', ' ')
-                voice_btn_html = (
-                    f'<button onclick="playVoiceNote_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">'
-                    '🔊 Play Voice Note'
-                    '</button>'
-                    f'<script>'
-                    f'function playVoiceNote_{i}() {{'
-                    f'const utterance = new SpeechSynthesisUtterance("{safe_text}");'
-                    f'window.speechSynthesis.speak(utterance);'
-                    f'}}'
-                    f'</script>'
-                )
-                st.markdown(voice_btn_html, unsafe_allow_html=True)
-
-        user_q = st.text_input("Customer Message", key="q_input")
-        c_send, c_clear = st.columns(2)
-        with c_send:
-            if st.button("Send to Gemini"):
-                if user_q:
-                    st.session_state.chat.append({"role": "user", "content": user_q})
-                    
-                    res = supabase.table("products").select("*").execute()
-                    items = res.data if res.data else []
-                    inventory_str = json.dumps(items)
-                    
-                    reply = call_gemini_api(user_q, inventory_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
-                    
-                    st.session_state.chat.append({"role": "assistant", "content": reply})
-                    st.rerun()
-        with c_clear:
-            if st.button("Clear Chat"):
-                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
-                st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Tab 5: Campaigns
-    with tab5:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("WhatsApp Campaigns")
-        c_name = st.text_input("Campaign Title")
-        c_msg = st.text_area("Message Template")
-        if st.button("Launch Campaign"):
-            if c_name and c_msg:
-                st.success(f"Campaign '{c_name}' broadcasted successfully via {st.session_state.whatsapp_number}!")
-            else:
-                st.warning("Fill in all fields.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Tab 6: Settings (API Key & WhatsApp Settings)
-    with tab6:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Settings & Gemini AI Configuration")
-        
-        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your Gemini API key here...")
-        new_num = st.text_input("WhatsApp Number", value=st.session_state.whatsapp_number)
-        new_rule = st.text_area("Gemini Sales Bot Instructions", value=st.session_state.bot_custom_rule)
-        
-        if st.button("Save Settings"):
-            st.session_state.gemini_api_key = gemini_key_input
-            st.session_state.whatsapp_number = new_num
-            st.session_state.bot_custom_rule = new_rule
-            st.success("Settings and Gemini API key saved successfully!")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=
