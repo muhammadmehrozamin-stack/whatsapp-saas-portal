@@ -59,8 +59,8 @@ def call_gemini_api(prompt, inventory_context, training_context, rules, api_key)
     
     try:
         genai.configure(api_key=key_to_use)
-        # Using gemini-1.5-flash via the official SDK
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Using gemini-2.5-flash which is the current required SDK model alias
+        model = genai.GenerativeModel('gemini-2.5-flash')
         system_instruction = f"{rules}\n\nMANUAL TRAINING / FAQ:\n{training_context}\n\nINVENTORY:\n{inventory_context}"
         full_prompt = f"{system_instruction}\n\nCustomer Message: {prompt}"
         response = model.generate_content(full_prompt)
