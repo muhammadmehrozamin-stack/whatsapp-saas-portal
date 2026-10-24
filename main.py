@@ -3,7 +3,7 @@ from supabase import create_client
 import pandas as pd
 import json
 import random
-import google.generativeai as genai
+import requests
 
 st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_icon="🟢")
 
@@ -58,19 +58,42 @@ def call_gemini_api(prompt, inventory_context, training_context, rules, api_key)
         return "⚠️ Please enter your API Key / Token in the Settings tab!"
     
     try:
-        # Properly configure the Google Generative AI SDK for Cloud OAuth tokens (AQ...)
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        
+        # Support both Bearer token for AQ... and query parameter for AIza... keys
+        headers = {'Content-Type': 'application/json'}
         if key_to_use.startswith("AQ."):
-            genai.configure(client_options={"api_key": key_to_use}, transport="rest")
+            headers['Authorization'] = f'Bearer {key_to_use}'
+            params = {}
         else:
-            genai.configure(api_key=key_to_use)
+            params = {'key': key_to_use}
             
-        model = genai.GenerativeModel('gemini-1.5-flash')
         system_instruction = f"{rules}\n\nMANUAL TRAINING / FAQ:\n{training_context}\n\nINVENTORY:\n{inventory_context}"
-        full_prompt = f"{system_instruction}\n\nCustomer Message: {prompt}"
-        response = model.generate_content(full_prompt)
-        return response.text
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": f"{system_instruction}\n\nCustomer Message: {prompt}"}
+                    ]
+                }
+            ]
+        }
+        
+        response = requests.post(url, headers=headers, params=params, json=payload)
+        res_data = response.json()
+        
+        if response.status_code == 200:
+            candidates = res_data.get("candidates", [])
+            if candidates:
+                return candidates[0]["content"]["parts"][0]["text"]
+            return "No response generated."
+        else:
+            error_msg = res_data.get("error", {}).get("message", response.text)
+            return f"API Error ({response.status_code}): {error_msg}"
+            
     except Exception as e:
-        return f"Error connecting to Gemini SDK: {e}"
+        return f"Error connecting to Gemini API: {e}"
 
 if st.session_state.page == "landing" and not st.session_state.logged_in:
     st.markdown("""
