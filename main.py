@@ -57,6 +57,7 @@ def call_gemini_api(prompt, inventory_context, rules, api_key):
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the Settings tab!"
     
+    # Using the stable gemini-2.5-flash endpoint
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key_to_use}"
     system_instruction = rules + "\nINVENTORY:\n" + inventory_context
     payload = {"contents": [{"parts": [{"text": system_instruction}, {"text": prompt}]}]}
