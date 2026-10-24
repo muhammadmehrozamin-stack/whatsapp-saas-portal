@@ -102,14 +102,14 @@ if "bot_custom_rule" not in st.session_state:
     )
 
 # ---------------------------------------------------------
-# Gemini API Integration Function (Updated to gemini-2.0-flash)
+# Gemini API Integration Function (Updated to gemini-3.8-flash)
 # ---------------------------------------------------------
 def call_gemini_api(prompt, inventory_context, rules, api_key):
     key_to_use = api_key or default_api_key
     if not key_to_use:
         return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets to activate full Gemini intelligence!"
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key_to_use}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={key_to_use}"
     
     system_instruction = f"""
     {rules}
@@ -365,52 +365,3 @@ elif st.session_state.logged_in:
         user_q = st.text_input("Customer Message", key="q_input")
         c_send, c_clear = st.columns(2)
         with c_send:
-            if st.button("Send to Gemini"):
-                if user_q:
-                    st.session_state.chat.append({"role": "user", "content": user_q})
-                    
-                    # Fetch live Supabase inventory
-                    res = supabase.table("products").select("*").execute()
-                    items = res.data if res.data else []
-                    inventory_str = json.dumps(items)
-                    
-                    # Call Gemini API
-                    reply = call_gemini_api(user_q, inventory_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
-                    
-                    st.session_state.chat.append({"role": "assistant", "content": reply})
-                    st.rerun()
-        with c_clear:
-            if st.button("Clear Chat"):
-                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
-                st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Tab 5: Campaigns
-    with tab5:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("WhatsApp Campaigns")
-        c_name = st.text_input("Campaign Title")
-        c_msg = st.text_area("Message Template")
-        if st.button("Launch Campaign"):
-            if c_name and c_msg:
-                st.success(f"Campaign '{c_name}' broadcasted successfully via {st.session_state.whatsapp_number}!")
-            else:
-                st.warning("Fill in all fields.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Tab 6: Settings (API Key & WhatsApp Settings)
-    with tab6:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Settings & Gemini AI Configuration")
-        
-        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your Gemini API key here...")
-        new_num = st.text_input("WhatsApp Number", value=st.session_state.whatsapp_number)
-        new_rule = st.text_area("Gemini Sales Bot Instructions", value=st.session_state.bot_custom_rule)
-        
-        if st.button("Save Settings"):
-            st.session_state.gemini_api_key = gemini_key_input
-            st.session_state.whatsapp_number = new_num
-            st.session_state.bot_custom_rule = new_rule
-            st.success("Settings and Gemini API key saved successfully!")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
