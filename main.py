@@ -85,7 +85,6 @@ if "user_email" not in st.session_state:
 if "whatsapp_number" not in st.session_state:
     st.session_state.whatsapp_number = "+92 300 0000000"
 
-# Fetch API key automatically from Streamlit Secrets or session state
 try:
     default_api_key = st.secrets.get("GEMINI_API_KEY", "")
 except Exception:
@@ -102,36 +101,4 @@ if "bot_custom_rule" not in st.session_state:
     )
 
 # ---------------------------------------------------------
-# Gemini API Integration Function (gemini-3.8-flash)
-# ---------------------------------------------------------
-def call_gemini_api(prompt, inventory_context, rules, api_key):
-    key_to_use = api_key or default_api_key
-    if not key_to_use:
-        return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets to activate full Gemini intelligence!"
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={key_to_use}"
-    
-    system_instruction = f"""
-    {rules}
-    
-    CURRENT LIVE STORE INVENTORY & PRODUCTS:
-    {inventory_context}
-    
-    Instructions: Reply conversationally in the exact language the customer used (e.g., Roman Urdu or English). Answer any general question brilliantly like Gemini, reference product colors/features from inventory, and close the sale.
-    """
-    
-    payload = {
-        "contents": [
-            {"parts": [{"text": system_instruction}, {"text": f"Customer says: {prompt}"}]}
-        ]
-    }
-    
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-    
-    try:
-        with
+# Gemini API Integration Function
