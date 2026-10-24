@@ -96,29 +96,3 @@ except Exception:
     default_api_key = ""
 
 if "gemini_api_key" not in st.session_state:
-    st.session_state.gemini_api_key = default_api_key
-
-if "bot_custom_rule" not in st.session_state:
-    st.session_state.bot_custom_rule = "You are an elite AI sales closer. Answer any query in any language, reference inventory, and close sales."
-
-# ---------------------------------------------------------
-# Gemini API Integration Function (Updated to gemini-3.8-flash)
-# ---------------------------------------------------------
-def call_gemini_api(prompt, inventory_context, rules, api_key):
-    key_to_use = api_key or default_api_key
-    if not key_to_use:
-        return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets!"
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={key_to_use}"
-    system_instruction = rules + "\nINVENTORY:\n" + inventory_context
-    
-    payload = {
-        "contents": [
-            {"parts": [{"text": system_instruction}, {"text": prompt}]}
-        ]
-    }
-    
-    try:
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode('utf-
