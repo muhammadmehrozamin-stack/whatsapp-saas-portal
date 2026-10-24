@@ -94,4 +94,4 @@ def call_gemini_api(prompt, inventory_context, training_context, rules, api_key)
             return f"API Error ({response.status_code}): {error_msg}"
             
     except Exception as e:
-        return f"Error connecting to
+        return f"
