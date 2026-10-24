@@ -20,11 +20,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 SUPABASE_URL = "https://toymkibgrdopljphayar.supabase.co"
-SUPABASE_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30."
-    "HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
-)
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRveW1raWJncmRvcGxqcGhheWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA4MTcsImV4cCI6MjEwNzgxNjgxN30.HLseuSvJAAWVxPRropNAMlTdmJyWownLt9YDqiVKXJM"
 
 @st.cache_resource
 def init_supabase():
@@ -59,7 +55,7 @@ if "bot_custom_rule" not in st.session_state:
 def call_gemini_api(prompt, inventory_context, rules, api_key):
     key_to_use = api_key or default_api_key
     if not key_to_use:
-        return "⚠️ Please enter your Google Gemini API Key in the 'Settings' tab or add it to Streamlit Secrets!"
+        return "⚠️ Please enter your Google Gemini API Key in the Settings tab!"
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key_to_use}"
     system_instruction = rules + "\nINVENTORY:\n" + inventory_context
@@ -78,7 +74,7 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
     st.markdown("""
         <div class='neon-card'>
             <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS Portal</div>
-            <div class='neon-subtitle'>Manage your AI-powered WhatsApp automated store and live inventory through Supabase.</div>
+            <div class='neon-subtitle'>Manage your AI-powered WhatsApp store and live inventory through Supabase.</div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -120,14 +116,14 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                         st.session_state.temp_whatsapp = whatsapp
                         st.session_state.generated_otp = otp
                         st.session_state.signup_step = "otp"
-                        st.success(f"🔐 [OTP Simulation] Code sent to {whatsapp}: {otp}")
+                        st.success(f"OTP Code: {otp}")
                         st.rerun()
                     else:
-                        st.warning("Please fill all fields and accept the privacy policy.")
+                        st.warning("Please fill all fields and accept policy.")
         else:
             with st.form("otp_form"):
-                st.write(f"Enter the 6-digit verification code sent to **{st.session_state.temp_whatsapp}**")
-                entered_otp = st.text_input("Verification Code (OTP)", placeholder="123456")
+                st.write("Enter verification code sent to your WhatsApp")
+                entered_otp = st.text_input("Verification Code", placeholder="123456")
                 verify_btn = st.form_submit_button("Verify & Complete Signup")
                 if verify_btn:
                     if entered_otp == st.session_state.generated_otp:
@@ -137,14 +133,14 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                                 "password": st.session_state.temp_password,
                                 "whatsapp_number": st.session_state.temp_whatsapp
                             }).execute()
-                            st.success("WhatsApp number verified successfully! Account created.")
+                            st.success("Account created successfully!")
                             st.session_state.signup_step = "form"
                             st.session_state.page = "login"
                             st.rerun()
                         except Exception as e:
-                            st.error(f"Error saving user: {e}")
+                            st.error(f"Error: {e}")
                     else:
-                        st.error("Invalid OTP code. Please try again.")
+                        st.error("Invalid OTP code.")
 
         if st.button("⬅ Back to Login"):
             st.session_state.signup_step = "form"
@@ -178,7 +174,7 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
                     st.session_state.page = "dashboard"
                     st.rerun()
                 else:
-                    st.error("Please enter your email.")
+                    st.error("Please enter email.")
         if st.button("Create Account instead"):
             st.session_state.page = "signup"
             st.rerun()
@@ -209,7 +205,7 @@ elif st.session_state.logged_in:
             prods = res.data if res.data else []
             st.metric("Total Products", len(prods))
             st.metric("Total Stock", sum([p.get('stock', 0) for p in prods]))
-            st.success("Connected to Supabase & Gemini AI successfully!")
+            st.success("Connected to Supabase & Gemini successfully!")
         except Exception as e:
             st.error(f"Error: {e}")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -221,8 +217,8 @@ elif st.session_state.logged_in:
             p_name = st.text_input("Product Name")
             p_price = st.number_input("Price ($)", min_value=0.0)
             p_stock = st.number_input("Stock", min_value=0, step=1)
-            p_desc = st.text_area("Description, Colors & Features")
-            p_img = st.file_uploader("Product Image (Optional)", type=['jpg', 'png'])
+            p_desc = st.text_area("Description & Features")
+            p_img = st.file_uploader("Product Image", type=['jpg', 'png'])
             
             if st.form_submit_button("Add Product"):
                 if p_name:
@@ -231,7 +227,7 @@ elif st.session_state.logged_in:
                         supabase.table("products").insert({
                             "name": p_name, "price": p_price, "stock": p_stock, "description": f"{p_desc} [Image: {img_name}]"
                         }).execute()
-                        st.success(f"Added {p_name} successfully!")
+                        st.success("Added product successfully!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
@@ -272,11 +268,11 @@ elif st.session_state.logged_in:
 
     with tab4:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("🤖 Gemini AI Sales Bot (Voice & Text)")
-        st.write("Ask any question in any language. The bot answers like Gemini and includes voice audio playback!")
+        st.subheader("🤖 Gemini AI Sales Bot")
+        st.write("Ask any question. The bot references inventory and includes voice playback!")
         
         if "chat" not in st.session_state:
-            st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
+            st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
 
         for i, m in enumerate(st.session_state.chat):
             align = "right" if m["role"] == "user" else "left"
@@ -285,7 +281,7 @@ elif st.session_state.logged_in:
             
             if m["role"] == "assistant":
                 safe_text = m['content'].replace('"', "'").replace('\n', ' ')
-                voice_btn_html = f'<button onclick="playVoiceNote_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">🔊 Play Voice Note</button><script>function playVoiceNote_{i}() {{ const utterance = new SpeechSynthesisUtterance("{safe_text}"); window.speechSynthesis.speak(utterance); }}</script>'
+                voice_btn_html = f'<button onclick="play_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">🔊 Play Voice Note</button><script>function play_{i}() {{ const u = new SpeechSynthesisUtterance("{safe_text}"); window.speechSynthesis.speak(u); }}</script>'
                 st.markdown(voice_btn_html, unsafe_allow_html=True)
 
         user_q = st.text_input("Customer Message", key="q_input")
@@ -302,7 +298,7 @@ elif st.session_state.logged_in:
                     st.rerun()
         with c_clear:
             if st.button("Clear Chat"):
-                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
+                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about our products."}]
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -313,38 +309,49 @@ elif st.session_state.logged_in:
         c_msg = st.text_area("Message Template")
         if st.button("Launch Campaign"):
             if c_name and c_msg:
-                st.success(f"Campaign '{c_name}' broadcasted successfully via {st.session_state.whatsapp_number}!")
+                st.success(f"Campaign '{c_name}' broadcasted successfully!")
             else:
                 st.warning("Fill in all fields.")
         st.markdown("</div>", unsafe_allow_html=True)
 
     with tab6:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.subheader("Settings & Gemini AI Configuration")
+        st.subheader("Settings & Configuration")
         
-        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your Gemini API key here...")
-        new_rule = st.text_area("Gemini Sales Bot Instructions", value=st.session_state.bot_custom_rule)
+        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste Gemini API key...")
+        new_rule = st.text_area("Bot Instructions", value=st.session_state.bot_custom_rule)
         
         st.markdown("---")
-        st.subheader("📱 Change WhatsApp Number (Requires OTP)")
+        st.subheader("📱 Change WhatsApp Number (OTP Required)")
         pending_num = st.text_input("New WhatsApp Number", value=st.session_state.whatsapp_number)
         
         if not st.session_state.settings_otp_step:
-            if st.button("Request OTP for New Number"):
+            if st.button("Request OTP"):
                 if pending_num != st.session_state.whatsapp_number:
                     otp_code = str(random.randint(100000, 999999))
                     st.session_state.pending_whatsapp = pending_num
                     st.session_state.settings_otp_code = otp_code
                     st.session_state.settings_otp_step = True
-                    st.success(f"🔐 [OTP Simulation] Code sent to {pending_num}: {otp_code}")
+                    st.success(f"OTP Code: {otp_code}")
                     st.rerun()
                 else:
-                    st.info("This is already your current WhatsApp number.")
+                    st.info("This is already your current number.")
         else:
-            st.write(f"Enter verification code sent to **{st.session_state.pending_whatsapp}**")
-            entered_set_otp = st.text_input("Enter OTP Code", placeholder="123456")
-            if st.button("Verify & Update WhatsApp"):
+            st.write("Enter verification code sent to your new WhatsApp")
+            entered_set_otp = st.text_input("Enter OTP", placeholder="123456")
+            if st.button("Verify & Update"):
                 if entered_set_otp == st.session_state.settings_otp_code:
                     st.session_state.whatsapp_number = st.session_state.pending_whatsapp
                     st.session_state.settings_otp_step = False
-                    st.success("WhatsApp number
+                    st.success("WhatsApp number updated!")
+                    st.rerun()
+                else:
+                    st.error("Invalid OTP.")
+        
+        st.markdown("---")
+        if st.button("Save Settings"):
+            st.session_state.gemini_api_key = gemini_key_input
+            st.session_state.bot_custom_rule = new_rule
+            st.success("Settings saved!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
