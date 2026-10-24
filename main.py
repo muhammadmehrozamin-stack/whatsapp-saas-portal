@@ -86,7 +86,7 @@ if "user_email" not in st.session_state:
 if "whatsapp_number" not in st.session_state:
     st.session_state.whatsapp_number = "+92 300 0000000"
 if "signup_step" not in st.session_state:
-    st.session_state.signup_step = "form" # 'form' or 'otp'
+    st.session_state.signup_step = "form"
 if "settings_otp_step" not in st.session_state:
     st.session_state.settings_otp_step = False
 
@@ -178,19 +178,17 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                 submitted = st.form_submit_button("Send OTP Verification")
                 if submitted:
                     if email and password and whatsapp and agree:
-                        # Generate 6 digit OTP
                         otp = str(random.randint(100000, 999999))
                         st.session_state.temp_email = email
                         st.session_state.temp_password = password
                         st.session_state.temp_whatsapp = whatsapp
                         st.session_state.generated_otp = otp
                         st.session_state.signup_step = "otp"
-                        st.success(f"🔐 [OTP Simulation] Verification code sent to {whatsapp}: {otp}")
+                        st.success(f"🔐 [OTP Simulation] Code sent to {whatsapp}: {otp}")
                         st.rerun()
                     else:
                         st.warning("Please fill all fields and accept the privacy policy.")
         else:
-            # OTP verification step
             with st.form("otp_form"):
                 st.write(f"Enter the 6-digit verification code sent to **{st.session_state.temp_whatsapp}**")
                 entered_otp = st.text_input("Verification Code (OTP)", placeholder="123456")
@@ -238,7 +236,6 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
                 if email:
                     st.session_state.logged_in = True
                     st.session_state.user_email = email
-                    # Try to fetch saved whatsapp number if available
                     try:
                         res = supabase.table("users").select("whatsapp_number").eq("email", email).execute()
                         if res.data and res.data[0].get("whatsapp_number"):
@@ -369,4 +366,96 @@ elif st.session_state.logged_in:
         for i, m in enumerate(st.session_state.chat):
             align = "right" if m["role"] == "user" else "left"
             bg = "#1e2d1e" if m["role"] == "user" else "#141a14"
-            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=
+            st.markdown(f"<div style='text-align:{align}; background:{bg}; padding:10px; border-radius:10px; margin:5px 0;'>{m['content']}</div>", unsafe_allow_html=True)
+            
+            if m["role"] == "assistant":
+                safe_text = m['content'].replace('"', "'").replace('\n', ' ')
+                voice_btn_html = f"""
+                    <button onclick="playVoiceNote_{i}()" style="background:#222e22; color:#ccff00; border:1px solid #ccff00; border-radius:15px; padding:4px 12px; font-size:12px; cursor:pointer; margin-bottom:8px;">
+                        🔊 Play Voice Note
+                    </button>
+                    <script>
+                    function playVoiceNote_{i}() {{
+                        const utterance = new SpeechSynthesisUtterance("{safe_text}");
+                        window.speechSynthesis.speak(utterance);
+                    }}
+                    </script>
+                """
+                st.markdown(voice_btn_html, unsafe_allow_html=True)
+
+        user_q = st.text_input("Customer Message", key="q_input")
+        c_send, c_clear = st.columns(2)
+        with c_send:
+            if st.button("Send to Gemini"):
+                if user_q:
+                    st.session_state.chat.append({"role": "user", "content": user_q})
+                    
+                    res = supabase.table("products").select("*").execute()
+                    items = res.data if res.data else []
+                    inventory_str = json.dumps(items)
+                    
+                    reply = call_gemini_api(user_q, inventory_str, st.session_state.bot_custom_rule, st.session_state.gemini_api_key)
+                    
+                    st.session_state.chat.append({"role": "assistant", "content": reply})
+                    st.rerun()
+        with c_clear:
+            if st.button("Clear Chat"):
+                st.session_state.chat = [{"role": "assistant", "content": "👋 Hello! Ask me anything about products, colors, features, or general questions."}]
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 5: Campaigns
+    with tab5:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("WhatsApp Campaigns")
+        c_name = st.text_input("Campaign Title")
+        c_msg = st.text_area("Message Template")
+        if st.button("Launch Campaign"):
+            if c_name and c_msg:
+                st.success(f"Campaign '{c_name}' broadcasted successfully via {st.session_state.whatsapp_number}!")
+            else:
+                st.warning("Fill in all fields.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Tab 6: Settings (API Key & WhatsApp Settings with OTP Verification)
+    with tab6:
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Settings & Gemini AI Configuration")
+        
+        gemini_key_input = st.text_input("Google Gemini API Key", value=st.session_state.gemini_api_key, type="password", placeholder="Paste your Gemini API key here...")
+        new_rule = st.text_area("Gemini Sales Bot Instructions", value=st.session_state.bot_custom_rule)
+        
+        st.markdown("---")
+        st.subheader("📱 Change WhatsApp Number (Requires OTP)")
+        pending_num = st.text_input("New WhatsApp Number", value=st.session_state.whatsapp_number)
+        
+        if not st.session_state.settings_otp_step:
+            if st.button("Request OTP for New Number"):
+                if pending_num != st.session_state.whatsapp_number:
+                    otp_code = str(random.randint(100000, 999999))
+                    st.session_state.pending_whatsapp = pending_num
+                    st.session_state.settings_otp_code = otp_code
+                    st.session_state.settings_otp_step = True
+                    st.success(f"🔐 [OTP Simulation] Code sent to {pending_num}: {otp_code}")
+                    st.rerun()
+                else:
+                    st.info("This is already your current WhatsApp number.")
+        else:
+            st.write(f"Enter verification code sent to **{st.session_state.pending_whatsapp}**")
+            entered_set_otp = st.text_input("Enter OTP Code", placeholder="123456")
+            if st.button("Verify & Update WhatsApp"):
+                if entered_set_otp == st.session_state.settings_otp_code:
+                    st.session_state.whatsapp_number = st.session_state.pending_whatsapp
+                    st.session_state.settings_otp_step = False
+                    st.success("WhatsApp number verified and updated successfully!")
+                    st.rerun()
+                else:
+                    st.error("Invalid OTP code.")
+        
+        st.markdown("---")
+        if st.button("Save Settings"):
+            st.session_state.gemini_api_key = gemini_key_input
+            st.session_state.bot_custom_rule = new_rule
+            st.success("Settings saved successfully!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
