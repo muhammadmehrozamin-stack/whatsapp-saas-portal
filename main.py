@@ -10,11 +10,11 @@ st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_ic
 st.markdown("""
 <style>
 .stApp { background-color: #050805; color: #ffffff; }
-.neon-card { border: 2px solid #ccff00; border-radius: 28px; padding: 40px 30px; background-color: #0b0f0b; box-shadow: 0 0 30px rgba(204, 255, 0, 0.25); max-width: 650px; margin: 20px auto; text-align: center; }
+.neon-card { border: 2px solid #ccff00; border-radius: 28px; padding: 40px 30px; background-color: #0b0f0b; box-shadow: 0 0 30px rgba(204, 255, 0, 0.25); max-width: 650px; margin: 30px auto; text-align: center; }
 .neon-title { color: #ffffff; font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 10px; }
-.neon-subtitle { color: #9e9e9e; font-size: 14px; text-align: center; margin-bottom: 25px; line-height: 1.5; }
+.neon-subtitle { color: #9e9e9e; font-size: 14px; text-align: center; margin-bottom: 30px; line-height: 1.5; }
 .stTextInput input, .stTextArea textarea { background-color: #141a14 !important; color: #ffffff !important; border-radius: 20px !important; border: 1px solid #283328 !important; padding: 12px 18px !important; }
-.stButton > button { background-color: #ccff00 !important; color: #050805 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; width: 100% !important; max-width: 280px !important; padding: 12px 20px !important; font-size: 15px !important; box-shadow: 0 0 20px rgba(204, 255, 0, 0.4); display: block; margin: 10px auto; }
+.stButton > button { background-color: #ccff00 !important; color: #050805 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; width: 100% !important; max-width: 280px !important; padding: 12px 20px !important; font-size: 15px !important; box-shadow: 0 0 20px rgba(204, 255, 0, 0.4); display: block; margin: 12px auto; }
 .stButton > button:hover { background-color: #b3e600 !important; box-shadow: 0 0 25px rgba(204, 255, 0, 0.7); }
 </style>
 """, unsafe_allow_html=True)
@@ -82,19 +82,22 @@ def call_groq_api(p, inv, tr, rules, key):
 
 # LANDING
 if st.session_state.page == "landing" and not st.session_state.logged_in:
-    st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>", unsafe_allow_html=True)
-    st.markdown("<div class='neon-subtitle'>Manage AI WhatsApp store and live inventory.</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class='neon-card'>
+        <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>
+        <div class='neon-subtitle'>Manage AI WhatsApp store and live inventory.</div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    if st.button("Join Now"):
-        st.session_state.page = "signup"
-        st.session_state.signup_step = "form"
-        st.rerun()
-    if st.button("Login"):
-        st.session_state.page = "login"
-        st.rerun()
-        
-    st.markdown("</div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("Join Now"):
+            st.session_state.page = "signup"
+            st.session_state.signup_step = "form"
+            st.rerun()
+        if st.button("Login"):
+            st.session_state.page = "login"
+            st.rerun()
 
 # SIGNUP
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
