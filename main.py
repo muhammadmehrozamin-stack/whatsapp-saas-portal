@@ -86,15 +86,18 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
         <div class='neon-card'>
             <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>
             <div class='neon-subtitle'>Manage AI WhatsApp store and live inventory.</div>
+        </div>
     """, unsafe_allow_html=True)
-    if st.button("Join Now"):
-        st.session_state.page = "signup"
-        st.session_state.signup_step = "form"
-        st.rerun()
-    if st.button("Login"):
-        st.session_state.page = "login"
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("Join Now"):
+            st.session_state.page = "signup"
+            st.session_state.signup_step = "form"
+            st.rerun()
+        if st.button("Login"):
+            st.session_state.page = "login"
+            st.rerun()
 
 # SIGNUP
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
@@ -217,6 +220,29 @@ elif st.session_state.logged_in:
                 if p_name:
                     supabase.table("products").insert({"name": p_name, "price": p_price, "stock": p_stock, "description": p_desc}).execute()
                     st.success("Added!")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.subheader("Edit Inventory")
+        try:
+            resp = supabase.table("products").select("*").execute()
+            if resp.data:
+                df = pd.DataFrame(resp.data)
+                edited = st.data_editor(df, key="editor", use_container_width=True)
+                if st.button("Save Edits"):
+                    for _, row in edited.iterrows():
+                        if 'id' in row and pd.notnull(row['id']):
+                            supabase.table("products").update({
+                                "name": row.get("name"), 
+                                "price": row.get("price"), 
+                                "stock": row.get("stock"), 
+                                "description": row.get("description")
+                            }).eq("id", row["id"]).execute()
+                    st.success("Changes saved!")
+            else:
+                st.info("No products to edit.")
+        except Exception as e:
+            st.error(f"Error: {e}")
         st.markdown("</div>", unsafe_allow_html=True)
 
     with t3:
