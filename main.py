@@ -1,3 +1,4 @@
+
 import streamlit as st
 from supabase import create_client
 import pandas as pd
@@ -10,12 +11,35 @@ st.set_page_config(page_title="WhatsApp SaaS Portal", layout="centered", page_ic
 st.markdown("""
 <style>
 .stApp { background-color: #050805; color: #ffffff; }
-.neon-card { border: 2px solid #ccff00; border-radius: 28px; padding: 40px 30px; background-color: #0b0f0b; box-shadow: 0 0 30px rgba(204, 255, 0, 0.25); max-width: 650px; margin: 30px auto; text-align: center; }
-.neon-title { color: #ffffff; font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 10px; }
-.neon-subtitle { color: #9e9e9e; font-size: 14px; text-align: center; margin-bottom: 30px; line-height: 1.5; }
+.neon-card { 
+    border: 2px solid #ccff00; 
+    border-radius: 28px; 
+    padding: 50px 40px; 
+    background-color: #0b0f0b; 
+    box-shadow: 0 0 35px rgba(204, 255, 0, 0.2); 
+    max-width: 650px; 
+    margin: 40px auto; 
+    text-align: center; 
+}
+.neon-title { color: #ffffff; font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 12px; letter-spacing: -0.5px; }
+.neon-subtitle { color: #a0a0a0; font-size: 15px; text-align: center; margin-bottom: 35px; line-height: 1.6; }
 .stTextInput input, .stTextArea textarea { background-color: #141a14 !important; color: #ffffff !important; border-radius: 20px !important; border: 1px solid #283328 !important; padding: 12px 18px !important; }
-.stButton > button { background-color: #ccff00 !important; color: #050805 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; width: 100% !important; padding: 12px 20px !important; font-size: 15px !important; box-shadow: 0 0 20px rgba(204, 255, 0, 0.4); display: block; margin: 0 auto; }
-.stButton > button:hover { background-color: #b3e600 !important; box-shadow: 0 0 25px rgba(204, 255, 0, 0.7); }
+.stButton > button { 
+    background-color: #ccff00 !important; 
+    color: #050805 !important; 
+    font-weight: 800 !important; 
+    border-radius: 30px !important; 
+    border: none !important; 
+    width: 100% !important; 
+    padding: 12px 24px !important; 
+    font-size: 15px !important; 
+    box-shadow: 0 0 20px rgba(204, 255, 0, 0.3); 
+    transition: all 0.3s ease;
+}
+.stButton > button:hover { 
+    background-color: #b3e600 !important; 
+    box-shadow: 0 0 25px rgba(204, 255, 0, 0.6); 
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -80,17 +104,15 @@ def call_groq_api(p, inv, tr, rules, key):
     except Exception as e:
         return f"Error: {e}"
 
-# LANDING
+# LANDING PAGE
 if st.session_state.page == "landing" and not st.session_state.logged_in:
     st.markdown("""
-    <div class='neon-card'>
-        <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>
-        <div class='neon-subtitle'>Manage AI WhatsApp store and live inventory.</div>
-    </div>
+        <div class='neon-card'>
+            <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>
+            <div class='neon-subtitle'>Manage your AI-powered WhatsApp store and live inventory seamlessly through Supabase.</div>
     """, unsafe_allow_html=True)
     
-    # Place buttons side by side using columns
-    col1, col_space, col2 = st.columns([2, 0.5, 2])
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("Join Now"):
             st.session_state.page = "signup"
@@ -100,24 +122,26 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
         if st.button("Login"):
             st.session_state.page = "login"
             st.rerun()
+            
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# SIGNUP
+# SIGNUP PAGE
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
     st.markdown("""
-    <div class='neon-card'>
-        <div class='neon-title'>Create Account</div>
-        <div class='neon-subtitle'>Secure WhatsApp registration.</div>
-    </div>
+        <div class='neon-card'>
+            <div class='neon-title'>Create Account</div>
+            <div class='neon-subtitle'>Secure registration with WhatsApp verification.</div>
+        </div>
     """, unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 2.2, 1])
     with c2:
         if st.session_state.signup_step == "form":
             with st.form("signup_form"):
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                whatsapp = st.text_input("WhatsApp Number")
-                agree = st.checkbox("Agree to Policy")
-                if st.form_submit_button("Send OTP"):
+                email = st.text_input("Email", placeholder="Enter your email")
+                password = st.text_input("Password", type="password", placeholder="Choose password")
+                whatsapp = st.text_input("WhatsApp Number", placeholder="+92 300 1234567")
+                agree = st.checkbox("I agree to Privacy Policy")
+                if st.form_submit_button("Send OTP Verification"):
                     if email and password and whatsapp and agree:
                         st.session_state.temp_email = email
                         st.session_state.temp_password = password
@@ -126,11 +150,12 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                         st.session_state.signup_step = "otp"
                         st.success(f"OTP Code: {st.session_state.generated_otp}")
                     else:
-                        st.warning("Fill all fields.")
+                        st.warning("Please fill all fields and accept policy.")
         else:
             with st.form("otp_form"):
-                entered = st.text_input("Enter OTP")
-                if st.form_submit_button("Verify"):
+                st.write("Enter verification code sent to your WhatsApp")
+                entered = st.text_input("Verification Code", placeholder="123456")
+                if st.form_submit_button("Verify & Complete"):
                     if entered == st.session_state.generated_otp:
                         try:
                             supabase.table("users").insert({
@@ -138,31 +163,31 @@ elif st.session_state.page == "signup" and not st.session_state.logged_in:
                                 "password": st.session_state.temp_password,
                                 "whatsapp_number": st.session_state.temp_whatsapp
                             }).execute()
-                            st.success("Success!")
+                            st.success("Account created successfully!")
                             st.session_state.signup_step = "form"
                             st.session_state.page = "login"
                         except Exception as e:
                             st.error(f"Error: {e}")
                     else:
-                        st.error("Invalid OTP.")
+                        st.error("Invalid OTP code.")
         if st.button("Back to Login"):
             st.session_state.signup_step = "form"
             st.session_state.page = "login"
             st.rerun()
 
-# LOGIN
+# LOGIN PAGE
 elif st.session_state.page == "login" and not st.session_state.logged_in:
     st.markdown("""
-    <div class='neon-card'>
-        <div class='neon-title'>Welcome Back</div>
-        <div class='neon-subtitle'>Sign in to dashboard.</div>
-    </div>
+        <div class='neon-card'>
+            <div class='neon-title'>Welcome Back</div>
+            <div class='neon-subtitle'>Sign in to your dashboard.</div>
+        </div>
     """, unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 2.2, 1])
     with c2:
         with st.form("login_form"):
-            email = st.text_input("Email", value="focusevingcoaching@gmail.com")
-            password = st.text_input("Password", type="password")
+            email = st.text_input("Email", value="focusevingcoaching@gmail.com", placeholder="Enter your email")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
             if st.form_submit_button("Login"):
                 if email:
                     st.session_state.logged_in = True
@@ -176,8 +201,8 @@ elif st.session_state.page == "login" and not st.session_state.logged_in:
                     st.session_state.page = "dashboard"
                     st.rerun()
                 else:
-                    st.error("Enter email.")
-        if st.button("Create Account"):
+                    st.error("Please enter email.")
+        if st.button("Create Account instead"):
             st.session_state.page = "signup"
             st.rerun()
 
