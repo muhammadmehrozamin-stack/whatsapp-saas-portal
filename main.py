@@ -82,22 +82,19 @@ def call_groq_api(p, inv, tr, rules, key):
 
 # LANDING
 if st.session_state.page == "landing" and not st.session_state.logged_in:
-    st.markdown("""
-    <div class='neon-card'>
-        <div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>
-        <div class='neon-subtitle'>Manage AI WhatsApp store and live inventory.</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='neon-title'>Welcome to<br><span style='color:#ccff00;'>WhatsApp</span> SaaS</div>", unsafe_allow_html=True)
+    st.markdown("<div class='neon-subtitle'>Manage AI WhatsApp store and live inventory.</div>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("Join Now"):
-            st.session_state.page = "signup"
-            st.session_state.signup_step = "form"
-            st.rerun()
-        if st.button("Login"):
-            st.session_state.page = "login"
-            st.rerun()
+    if st.button("Join Now"):
+        st.session_state.page = "signup"
+        st.session_state.signup_step = "form"
+        st.rerun()
+    if st.button("Login"):
+        st.session_state.page = "login"
+        st.rerun()
+        
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # SIGNUP
 elif st.session_state.page == "signup" and not st.session_state.logged_in:
