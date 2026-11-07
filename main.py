@@ -14,7 +14,7 @@ st.markdown("""
 .neon-title { color: #ffffff; font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 10px; }
 .neon-subtitle { color: #9e9e9e; font-size: 14px; text-align: center; margin-bottom: 30px; line-height: 1.5; }
 .stTextInput input, .stTextArea textarea { background-color: #141a14 !important; color: #ffffff !important; border-radius: 20px !important; border: 1px solid #283328 !important; padding: 12px 18px !important; }
-.stButton > button { background-color: #ccff00 !important; color: #050805 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; width: 100% !important; max-width: 280px !important; padding: 12px 20px !important; font-size: 15px !important; box-shadow: 0 0 20px rgba(204, 255, 0, 0.4); display: block; margin: 12px auto; }
+.stButton > button { background-color: #ccff00 !important; color: #050805 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; width: 100% !important; padding: 12px 20px !important; font-size: 15px !important; box-shadow: 0 0 20px rgba(204, 255, 0, 0.4); display: block; margin: 0 auto; }
 .stButton > button:hover { background-color: #b3e600 !important; box-shadow: 0 0 25px rgba(204, 255, 0, 0.7); }
 </style>
 """, unsafe_allow_html=True)
@@ -89,12 +89,14 @@ if st.session_state.page == "landing" and not st.session_state.logged_in:
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
+    # Place buttons side by side using columns
+    col1, col_space, col2 = st.columns([2, 0.5, 2])
+    with col1:
         if st.button("Join Now"):
             st.session_state.page = "signup"
             st.session_state.signup_step = "form"
             st.rerun()
+    with col2:
         if st.button("Login"):
             st.session_state.page = "login"
             st.rerun()
